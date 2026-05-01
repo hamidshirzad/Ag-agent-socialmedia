@@ -133,11 +133,11 @@ export default function ContentEngine() {
       return;
     }
 
-    const scheduledTimestamp = Timestamp.fromDate(new Date(scheduleDate));
     if (isNaN(new Date(scheduleDate).getTime())) {
       alert("Invalid schedule date. Please select a valid date and time.");
       return;
     }
+    const scheduledTimestamp = Timestamp.fromDate(new Date(scheduleDate));
 
     setIsDeploying(true);
     try {
