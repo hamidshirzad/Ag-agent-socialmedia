@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Lora", ui-serif, Georgia, serif;
+
+  --color-sb-green: #006241;
+  --color-sb-accent: #00754A;
+  --color-sb-house: #1E3932;
+  --color-sb-uplift: #2b5148;
+  --color-sb-light: #d4e9e2;
+  --color-sb-gold: #cba258;
+  --color-sb-cream: #f2f0eb;
+  --color-sb-ceramic: #edebe9;
+  
+  --tracking-sb: -0.01em;
+  
+  --shadow-sb-card: 0px 0px 0.5px 0px rgba(0,0,0,0.14), 0px 1px 1px 0px rgba(0,0,0,0.24);
+  --shadow-sb-nav: 0 1px 3px rgba(0,0,0,0.1), 0 2px 2px rgba(0,0,0,0.06), 0 0 2px rgba(0,0,0,0.07);
+  --shadow-sb-frap: 0 0 6px rgba(0,0,0,0.24), 0 8px 12px rgba(0,0,0,0.14);
+}
+
+@layer base {
+  html {
+    font-size: 62.5%; /* 1rem = 10px */
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-sb-cream text-black/87 font-sans text-[1.6rem] leading-relaxed tracking-sb;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-semibold;
+  }
+}
+
+@layer components {
+  .sb-pill {
+    @apply rounded-[50px];
+  }
+
+  .sb-button-active {
+    @apply transition-all duration-200 active:scale-95;
+  }
+
+  .sb-shadow-card {
+    box-shadow: var(--shadow-sb-card);
+  }
+
+  .sb-shadow-nav {
+    box-shadow: var(--shadow-sb-nav);
+  }
+
+  .sb-shadow-frap {
+    box-shadow: var(--shadow-sb-frap);
+  }
+}
+
+@layer utilities {
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .animate-marquee {
+    animation: marquee 30s linear infinite;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-sb-house/20 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-sb-house/40;
+}

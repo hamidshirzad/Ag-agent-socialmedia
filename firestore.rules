@@ -1,0 +1,145 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Connection Test ---
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // --- Users ---
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().keys().size() == 6;
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        // Action: Profile Update during onboarding or settings
+        (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'company', 'niche', 'goals', 'onboardingComplete'])) ||
+        // Action: Plan Sync
+        (incoming().diff(existing()).affectedKeys().hasOnly(['plan', 'subscriptionStatus', 'paypalSubscriptionId']))
+      ) && (
+        incoming().email == existing().email && 
+        incoming().createdAt == existing().createdAt
+      );
+
+      function isValidUser(data) {
+        return data.email is string && data.email.size() <= 100
+            && data.name is string && data.name.size() <= 100
+            && data.plan in ['starter', 'pro', 'agency']
+            && data.onboardingComplete is bool
+            && data.keys().hasAll(['email', 'name', 'plan', 'subscriptionStatus', 'onboardingComplete', 'createdAt']);
+      }
+
+      // Sub-collection: Scoring Rules
+      match /scoringRules/{ruleId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidScoringRule(incoming());
+        allow delete: if isOwner(userId);
+
+        function isValidScoringRule(data) {
+          return data.userId == request.auth.uid
+              && data.attribute is string && data.attribute.size() <= 100
+              && data.operator is string && data.operator.size() <= 50
+              && data.points is int && data.points >= -1000 && data.points <= 1000
+              && data.category in ['attribute', 'engagement', 'crm']
+              && data.isActive is bool;
+        }
+      }
+    }
+
+    // --- Posts ---
+    match /posts/{postId} {
+      allow get: if isSignedIn() && isValidId(postId) && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isOwner(incoming().userId) && isValidPost(incoming()) && incoming().keys().size() == 5;
+      
+      allow update: if isOwner(existing().userId) && isOwner(incoming().userId) 
+                    && isValidPost(incoming())
+                    && incoming().createdAt == existing().createdAt
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'platforms', 'scheduledAt', 'status']);
+      
+      allow delete: if isOwner(existing().userId);
+
+      function isValidPost(data) {
+        return data.userId is string && data.userId.size() <= 128
+            && data.caption is string && data.caption.size() <= 5000
+            && data.status in ['draft', 'scheduled', 'posted']
+            && data.keys().hasAll(['userId', 'caption', 'status', 'createdAt']);
+      }
+    }
+
+    // --- Leads ---
+    match /leads/{leadId} {
+      allow get: if isSignedIn() && isValidId(leadId) && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isOwner(incoming().userId) && isValidLead(incoming()) && incoming().keys().size() == 7;
+      
+      allow update: if isOwner(existing().userId) && isOwner(incoming().userId) 
+                    && isValidLead(incoming())
+                    && incoming().createdAt == existing().createdAt
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'status', 'score']);
+
+      function isValidLead(data) {
+        return data.userId is string && data.userId.size() <= 128
+            && data.email is string && data.email.size() <= 100
+            && data.status in ['new', 'qualified', 'booked', 'closed']
+            && data.score is int && data.score >= 0 && data.score <= 1000
+            && data.keys().hasAll(['userId', 'email', 'name', 'status', 'score', 'createdAt']);
+      }
+
+      // Sub-collection: Messages
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && isValidId(messageId) && isOwner(get(/databases/$(database)/documents/leads/$(leadId)).data.userId);
+        allow create: if isSignedIn() && isValidId(messageId) 
+                      && isOwner(get(/databases/$(database)/documents/leads/$(leadId)).data.userId)
+                      && isValidMessage(incoming());
+        
+        function isValidMessage(data) {
+          return data.content is string && data.content.size() <= 5000
+              && data.sender in ['ai', 'user'];
+        }
+      }
+    }
+
+    // --- Campaigns ---
+    match /campaigns/{campaignId} {
+      allow get: if isSignedIn() && isValidId(campaignId) && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isOwner(incoming().userId) && isValidCampaign(incoming());
+      allow update: if isOwner(existing().userId) && isOwner(incoming().userId) && isValidCampaign(incoming());
+
+      function isValidCampaign(data) {
+        return data.userId is string && data.userId.size() <= 128
+            && data.name is string && data.name.size() <= 100;
+      }
+    }
+  }
+}

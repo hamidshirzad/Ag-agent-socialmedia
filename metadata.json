@@ -1,0 +1,11 @@
+{
+  "name": "Fourdoor AI Growth Engine",
+  "description": "Autonomous AI-driven marketing, lead generation, and distribution system with integrated CRM and billing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "AI-powered content generation",
+    "Lead scoring and qualification",
+    "Social media distribution engine",
+    "Integrated PayPal subscriptions"
+  ]
+}
