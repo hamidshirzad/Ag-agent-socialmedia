@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
-  signIn: () => Promise<void>;
+  signIn: () => Promise<{ isNewUser: boolean }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -47,28 +47,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const signIn = async () => {
+  const signIn = async (): Promise<{ isNewUser: boolean }> => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
-      // Initialize profile if not exists
-      const userRef = doc(db, "users", user.uid);
+      const firebaseUser = result.user;
+      setUser(firebaseUser);
+
+      const userRef = doc(db, "users", firebaseUser.uid);
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
         const newProfile: Partial<UserProfile> = {
-          email: user.email || "",
-          name: user.displayName || "New User",
+          email: firebaseUser.email || "",
+          name: firebaseUser.displayName || "New User",
           plan: 'starter',
           subscriptionStatus: 'inactive',
           onboardingComplete: false,
           createdAt: new Date().toISOString(),
         };
         await setDoc(userRef, newProfile);
-        setProfile({ id: user.uid, ...newProfile } as UserProfile);
+        setProfile({ id: firebaseUser.uid, ...newProfile } as UserProfile);
+        return { isNewUser: true };
+      } else {
+        setProfile({ id: firebaseUser.uid, ...userSnap.data() } as UserProfile);
+        return { isNewUser: false };
       }
     } catch (error) {
       console.error("Login failed", error);
+      return { isNewUser: false };
     }
   };
 

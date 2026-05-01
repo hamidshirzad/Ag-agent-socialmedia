@@ -9,33 +9,25 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function startServer() {
+export function createApp() {
   const app = express();
-  const PORT = 3000;
 
   app.use(express.json());
 
-  // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // PayPal Webhook
   app.post("/api/billing/webhook", async (req, res) => {
     const event = req.body;
     console.log("PayPal Webhook Received:", event.event_type);
 
     try {
-      // In a real production app, verify the webhook signature here using PAYPAL_WEBHOOK_ID
-      // For this environment, we will process the known subscription events
-      
       const subscriptionId = event.resource?.id;
       const eventType = event.event_type;
 
       if (eventType === "BILLING.SUBSCRIPTION.ACTIVATED") {
         console.log(`Subscription ${subscriptionId} activated.`);
-        // Here you would find the user associated with this subscription
-        // and update their status in Firestore.
       }
 
       res.status(200).send("Webhook Processed");
@@ -45,13 +37,18 @@ async function startServer() {
     }
   });
 
-  // Content Generation API (Proxied/Server-side if needed, but Gemini skill says frontend first)
-  // However, things like distribution might need backend.
   app.post("/api/schedule-post", (req, res) => {
     const { postId, platforms, scheduledAt } = req.body;
     console.log(`Scheduling post ${postId} for ${platforms} at ${scheduledAt}`);
     res.json({ success: true });
   });
+
+  return app;
+}
+
+async function startServer() {
+  const app = createApp();
+  const PORT = 3000;
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

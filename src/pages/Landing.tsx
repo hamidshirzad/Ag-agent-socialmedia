@@ -5,15 +5,16 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
 export default function Landing() {
-  const { signIn, user } = useAuth();
+  const { signIn, user, profile, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleStart = async () => {
+    if (loading) return;
     if (user) {
-      navigate("/dashboard");
+      navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
     } else {
-      await signIn();
-      navigate("/onboarding");
+      const { isNewUser } = await signIn();
+      navigate(isNewUser ? "/onboarding" : "/dashboard");
     }
   };
 
