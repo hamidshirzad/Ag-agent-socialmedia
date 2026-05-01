@@ -1,8 +1,21 @@
+export interface SocialAccount {
+  connected: boolean;
+  accessToken?: string;
+  apiKey?: string;
+  apiSecret?: string;
+  pageId?: string;
+  username?: string;
+  connectedAt?: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
   company?: string;
+  niche?: string;
+  goals?: string;
+  industry?: string;
   plan: 'starter' | 'pro' | 'agency';
   subscriptionStatus: string;
   paypalSubscriptionId?: string;
@@ -12,6 +25,12 @@ export interface UserProfile {
     openai?: string;
     anthropic?: string;
     gemini?: string;
+  };
+  socialAccounts?: {
+    linkedin?: SocialAccount;
+    x?: SocialAccount;
+    meta?: SocialAccount;
+    tiktok?: SocialAccount;
   };
 }
 
@@ -24,7 +43,9 @@ export interface Post {
   platforms: string[];
   caption: string;
   mediaUrl?: string;
-  scheduledAt: string;
+  scheduledAt?: string;
+  autoReply?: boolean;
+  agentEngagement?: boolean;
   status: 'draft' | 'scheduled' | 'posted';
   createdAt: string;
 }

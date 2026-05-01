@@ -13,8 +13,12 @@ export default function Landing() {
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
     } else {
-      const { isNewUser } = await signIn();
-      navigate(isNewUser ? "/onboarding" : "/dashboard");
+      try {
+        const { isNewUser } = await signIn();
+        navigate(isNewUser ? "/onboarding" : "/dashboard");
+      } catch {
+        // popup cancelled or sign-in failed — stay on Landing
+      }
     }
   };
 
