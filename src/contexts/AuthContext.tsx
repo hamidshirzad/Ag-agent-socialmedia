@@ -53,7 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(firebaseUser);
 
     const userRef = doc(db, "users", firebaseUser.uid);
-    const userSnap = await getDoc(userRef);
+    let userSnap;
+    try {
+      userSnap = await getDoc(userRef);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+    }
+
     if (!userSnap.exists()) {
       const newProfile: Partial<UserProfile> = {
         email: firebaseUser.email || "",
@@ -63,13 +69,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         onboardingComplete: false,
         createdAt: new Date().toISOString(),
       };
-      await setDoc(userRef, newProfile);
+      try {
+        await setDoc(userRef, newProfile);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, `users/${firebaseUser.uid}`);
+      }
       setProfile({ id: firebaseUser.uid, ...newProfile } as UserProfile);
       return { isNewUser: true };
-    } else {
-      setProfile({ id: firebaseUser.uid, ...userSnap.data() } as UserProfile);
-      return { isNewUser: false };
     }
+
+    setProfile({ id: firebaseUser.uid, ...userSnap.data() } as UserProfile);
+    return { isNewUser: false };
   };
 
   const logout = async () => {
