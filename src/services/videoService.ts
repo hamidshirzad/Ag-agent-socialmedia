@@ -9,12 +9,13 @@ export interface VideoGenerationConfig {
 
 export async function generateVeoVideo(
   config: VideoGenerationConfig,
-  onProgress: (status: string) => void
+  onProgress: (status: string) => void,
+  apiKey?: string
 ): Promise<string> {
-  const apiKey = (process.env as any).API_KEY;
-  if (!apiKey) throw new Error("API Key missing. Please select one.");
+  const resolvedKey = apiKey ?? import.meta.env.VITE_GOOGLE_API_KEY;
+  if (!resolvedKey) throw new Error("Google API Key missing. Please add it in Settings.");
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: resolvedKey });
 
   onProgress("Initializing Neural Sequence...");
   
@@ -73,7 +74,7 @@ export async function generateVeoVideo(
   const response = await fetch(downloadLink, {
     method: 'GET',
     headers: {
-      'x-goog-api-key': apiKey,
+      'x-goog-api-key': resolvedKey,
     },
   });
 

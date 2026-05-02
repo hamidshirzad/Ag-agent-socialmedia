@@ -1,15 +1,16 @@
 import { motion } from "motion/react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { 
-  BarChart3, 
-  Users, 
-  Zap, 
-  TrendingUp, 
-  Calendar, 
-  Inbox, 
-  Settings, 
-  Send, 
-  Brain, 
+import {
+  BarChart3,
+  Users,
+  Zap,
+  TrendingUp,
+  Calendar,
+  Inbox,
+  Settings,
+  Send,
+  Brain,
   Activity,
   PieChart as PieChartIcon,
   ChevronRight
@@ -18,39 +19,86 @@ import { Sidebar } from "../components/Sidebar";
 import { StatsCard } from "../components/StatsCard";
 import { cn } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell
 } from 'recharts';
+import { db } from "../lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { Lead, Post, Campaign } from "../types";
 
-const performanceData = [
-  { name: '04/24', engagement: 45, conversions: 12 },
-  { name: '04/25', engagement: 52, conversions: 15 },
-  { name: '04/26', engagement: 48, conversions: 10 },
-  { name: '04/27', engagement: 61, conversions: 22 },
-  { name: '04/28', engagement: 55, conversions: 18 },
-  { name: '04/29', engagement: 67, conversions: 25 },
-  { name: '04/30', engagement: 72, conversions: 28 },
-];
+const CHART_COLORS = ['#00754A', '#cba258', '#1B1F1C', '#FF5733'];
 
-const campaignData = [
-  { name: 'Q3 SaaS', value: 400, color: '#00754A' },
-  { name: 'Fintech', value: 300, color: '#cba258' },
-  { name: 'Founders', value: 200, color: '#1B1F1C' },
-  { name: 'Outreach', value: 150, color: '#FF5733' },
-];
+function buildLast7Days(leads: Lead[], posts: Post[]) {
+  const today = new Date();
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - 6 + i);
+    const label = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+
+    const conversions = leads.filter(l => {
+      const created = l.createdAt ? new Date(l.createdAt) : null;
+      return created && created.toDateString() === d.toDateString();
+    }).length;
+
+    const engagement = posts.reduce((sum, p) => {
+      const at = p.scheduledAt;
+      if (!at) return sum;
+      const postDate = typeof (at as any).toDate === 'function' ? (at as any).toDate() : new Date(at as string);
+      if (postDate.toDateString() === d.toDateString()) {
+        return sum + (p.metrics?.engagements ?? 0);
+      }
+      return sum;
+    }, 0);
+
+    return { name: label, engagement, conversions };
+  });
+}
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const navigate = useNavigate();
+
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const uid = user.uid;
+    Promise.all([
+      getDocs(query(collection(db, "leads"), where("userId", "==", uid))),
+      getDocs(query(collection(db, "posts"), where("userId", "==", uid))),
+      getDocs(query(collection(db, "campaigns"), where("userId", "==", uid))),
+    ]).then(([leadsSnap, postsSnap, campaignsSnap]) => {
+      setLeads(leadsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Lead)));
+      setPosts(postsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Post)));
+      setCampaigns(campaignsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Campaign)));
+    }).catch(() => {});
+  }, [user]);
+
+  const scheduledCount = posts.filter(p => p.status === 'scheduled').length;
+  const qualifiedLeads = leads.filter(l => l.status === 'qualified').length;
+  const totalEngagements = posts.reduce((s, p) => s + (p.metrics?.engagements ?? 0), 0);
+  const engagementRate = posts.length > 0 ? ((totalEngagements / posts.length) * 100).toFixed(1) : "0.0";
+
+  const performanceData = buildLast7Days(leads, posts);
+
+  const campaignData = campaigns.length > 0
+    ? campaigns.slice(0, 4).map((c, i) => ({ name: c.name, value: c.variations?.length ?? 1, color: CHART_COLORS[i % CHART_COLORS.length] }))
+    : [
+        { name: 'No campaigns', value: 1, color: '#e5e7eb' },
+      ];
+  const campaignTotal = campaignData.reduce((s, c) => s + c.value, 0);
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
@@ -101,10 +149,10 @@ export default function Dashboard() {
         </div>
 
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-          <StatsCard label="Lead Volume" value="142" trend="+12.4%" icon={Users} />
-          <StatsCard label="Engagement" value="4.8%" trend="+0.2%" icon={Zap} />
-          <StatsCard label="Conversion" value="1.2%" trend="-0.1%" icon={TrendingUp} />
-          <StatsCard label="Scheduled" value="18" icon={Calendar} />
+          <StatsCard label="Lead Volume" value={String(leads.length)} icon={Users} />
+          <StatsCard label="Engagement" value={`${engagementRate}%`} icon={Zap} />
+          <StatsCard label="Qualified" value={String(qualifiedLeads)} icon={TrendingUp} />
+          <StatsCard label="Scheduled" value={String(scheduledCount)} icon={Calendar} />
         </section>
 
         {/* Analytics Section */}
@@ -196,7 +244,7 @@ export default function Dashboard() {
                 </ResponsiveContainer>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
                    <p className="text-[1rem] font-black uppercase tracking-widest text-black/30">Total</p>
-                   <p className="text-[2.4rem] font-bold text-sb-green">1,050</p>
+                   <p className="text-[2.4rem] font-bold text-sb-green">{campaignTotal}</p>
                 </div>
              </div>
              <div className="mt-8 space-y-4">
@@ -206,7 +254,7 @@ export default function Dashboard() {
                         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
                         <span className="text-[1.2rem] font-bold text-sb-green uppercase">{c.name}</span>
                      </div>
-                     <span className="text-[1.2rem] font-black text-black/40">{Math.round((c.value / 1050) * 100)}%</span>
+                     <span className="text-[1.2rem] font-black text-black/40">{Math.round((c.value / campaignTotal) * 100)}%</span>
                   </div>
                 ))}
              </div>
@@ -301,7 +349,7 @@ export default function Dashboard() {
       </main>
 
       {/* Signature Floating Frap Button */}
-      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-[60]">
+      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-60">
         <Zap className="fill-white w-6 h-6" />
       </button>
     </div>
