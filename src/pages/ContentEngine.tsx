@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { motion, AnimatePresence } from "motion/react";
-import { Zap, Send, RotateCcw, Video, FileText, Share2, Sparkles, CheckCircle2, Brain, Database, Shield, Calendar, Clock, Target, FlaskConical } from "lucide-react";
+import { Zap, Send, RotateCcw, Video, FileText, Share2, Sparkles, CheckCircle2, Brain, Database, Shield, Calendar, Clock, Target, FlaskConical, Play, Loader2 } from "lucide-react";
 import { generateMarketingContent } from "../services/geminiService";
+import { generateVeoVideo } from "../services/videoService";
 import { useAuth } from "../contexts/AuthContext";
 import { cn } from "../lib/utils";
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, Timestamp } from "firebase/firestore";
@@ -20,6 +21,9 @@ export default function ContentEngine() {
   const [selectedVariationId, setSelectedVariationId] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [isVideoGenerating, setIsVideoGenerating] = useState(false);
+  const [videoStatus, setVideoStatus] = useState("");
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
 
   // Distribution State
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -157,7 +161,7 @@ export default function ContentEngine() {
           type,
           platforms: [platform],
           caption,
-          mediaUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(result.suggestedImagePrompt)}?width=1280&height=720&seed=${result.imageSeed || 42}&nologo=true`,
+          mediaUrl: platform === 'tiktok' && generatedVideoUrl ? generatedVideoUrl : `https://image.pollinations.ai/prompt/${encodeURIComponent(result.suggestedImagePrompt)}?width=1280&height=720&seed=${result.imageSeed || 42}&nologo=true`,
           scheduledAt: scheduledTimestamp,
           autoReply,
           agentEngagement,
@@ -171,10 +175,49 @@ export default function ContentEngine() {
       setResult(null);
       setSelectedPlatforms([]);
       setScheduleDate("");
+      setGeneratedVideoUrl(null);
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, "posts");
     } finally {
       setIsDeploying(false);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!(window as any).aistudio) {
+      alert("Neural API Bridge not found.");
+      return;
+    }
+
+    const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+    if (!hasKey) {
+      await (window as any).aistudio.openSelectKey();
+      // Assume success as per skill instructions
+    }
+
+    setIsVideoGenerating(true);
+    setVideoStatus("Connecting to Veo Cluster...");
+
+    try {
+      // For Veo, we'll use the tiktok script and suggested image prompt as baseline
+      const videoUrl = await generateVeoVideo({
+        prompt: `Scene based on this script: ${result.tiktokScript}. Aesthetic: ${result.suggestedImagePrompt}`,
+        aspectRatio: '9:16',
+        resolution: '720p'
+      }, (status) => setVideoStatus(status));
+
+      setGeneratedVideoUrl(videoUrl);
+    } catch (err: any) {
+      console.error(err);
+      if (err.message === "KEY_NOT_FOUND") {
+        await (window as any).aistudio.openSelectKey();
+        alert("Session expired. Neural key reset. Please try generating again.");
+      } else {
+        alert(err.message || "Video synthesis failed.");
+      }
+    } finally {
+      setIsVideoGenerating(false);
+      setVideoStatus("");
     }
   };
 
@@ -359,15 +402,51 @@ export default function ContentEngine() {
                           </div>
                           
                           <div className="space-y-6">
-                            <div className="relative group rounded-[12px] overflow-hidden border border-white/10 aspect-video bg-sb-cream/5 shadow-inner">
-                              <img 
-                                src={`https://image.pollinations.ai/prompt/${encodeURIComponent(result.suggestedImagePrompt)}?width=1280&height=720&seed=${result.imageSeed || 42}&nologo=true`}
-                                alt="AI Generated Visual"
-                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                referrerPolicy="no-referrer"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-sb-house/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
-                                <p className="text-[1.1rem] text-white/60 italic font-medium">"{result.suggestedImagePrompt}"</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-4">
+                                <p className="text-[1.1rem] font-black uppercase tracking-widest text-white/40">Base Visual</p>
+                                <div className="relative group rounded-[12px] overflow-hidden border border-white/10 aspect-video bg-sb-cream/5 shadow-inner">
+                                  <img 
+                                    src={`https://image.pollinations.ai/prompt/${encodeURIComponent(result.suggestedImagePrompt)}?width=1280&height=720&seed=${result.imageSeed || 42}&nologo=true`}
+                                    alt="AI Generated Visual"
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-sb-house/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
+                                    <p className="text-[1.1rem] text-white/60 italic font-medium">"{result.suggestedImagePrompt}"</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                <p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-gold">Veo Video synthesis</p>
+                                <div className="relative group rounded-[12px] overflow-hidden border border-white/10 aspect-video bg-sb-cream/5 shadow-inner flex items-center justify-center">
+                                  {generatedVideoUrl ? (
+                                    <video 
+                                      src={generatedVideoUrl} 
+                                      controls 
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : isVideoGenerating ? (
+                                    <div className="flex flex-col items-center gap-6 p-8 text-center bg-sb-house/50 w-full h-full justify-center">
+                                      <Loader2 size={32} className="text-sb-gold animate-spin" />
+                                      <div className="space-y-2">
+                                        <p className="text-white font-black uppercase tracking-widest text-[1.2rem]">{videoStatus}</p>
+                                        <p className="text-white/40 text-[1rem] italic">Neural rendering in progress. This may take 2-3 minutes.</p>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-6 p-8 text-center">
+                                      <Video size={40} className="text-white/10" />
+                                      <button 
+                                        onClick={handleGenerateVideo}
+                                        className="px-8 py-4 bg-sb-gold text-sb-house rounded-full text-[1.1rem] font-black uppercase tracking-widest hover:shadow-lg transition-all flex items-center gap-3 animate-pulse border-2 border-sb-gold/20"
+                                      >
+                                        <Play size={14} className="fill-current" /> Generate Veo Video
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             

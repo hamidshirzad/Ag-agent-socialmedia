@@ -211,19 +211,39 @@ export function createApp() {
   // PayPal Webhook
   app.post("/api/billing/webhook", async (req, res) => {
     const event = req.body;
-    console.log("PayPal Webhook Received:", event.event_type);
+    const eventType = event.event_type;
+    const resource = event.resource;
+    
+    console.log(`[PayPal Webhook] ${eventType} received:`, event.id);
 
     try {
-      const subscriptionId = event.resource?.id;
-      const eventType = event.event_type;
+      switch (eventType) {
+        case "PAYMENT.AUTHORIZATION.CREATED":
+          console.log(`Authorization created for amount ${resource.amount.total} ${resource.amount.currency}`);
+          // Logic to capture payment or update order status in Firestore would go here
+          // We'd typically use a field like 'custom_id' from the request to find the user
+          break;
+          
+        case "BILLING.SUBSCRIPTION.ACTIVATED":
+          console.log(`Subscription ${resource.id} activated.`);
+          // Update user status to 'PRO' or similar
+          break;
 
-      if (eventType === "BILLING.SUBSCRIPTION.ACTIVATED") {
-        console.log(`Subscription ${subscriptionId} activated.`);
+        case "PAYMENT.SALE.COMPLETED":
+          console.log(`Sale completed for ${resource.amount.total}`);
+          break;
+
+        case "BILLING.SUBSCRIPTION.CANCELLED":
+          console.log(`Subscription ${resource.id} cancelled.`);
+          break;
+
+        default:
+          console.log(`Unhandled PayPal event type: ${eventType}`);
       }
 
       res.status(200).send("Webhook Processed");
     } catch (error) {
-      console.error("Webhook Error:", error);
+      console.error("Webhook Processing Error:", error);
       res.status(500).send("Internal Server Error");
     }
   });
