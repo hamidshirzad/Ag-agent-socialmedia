@@ -7,7 +7,7 @@ test.use({
     apiKey: APPLITOOLS_API_KEY,
     serverUrl: 'https://eyes.applitools.com',
     appName: 'Fourdoor AI',
-    batchName: 'Fourdoor AI — Public Pages',
+    batch: { name: 'Fourdoor AI — Public Pages' },
     failTestsOnDiff: 'afterEach',
     type: 'classic',
   },
