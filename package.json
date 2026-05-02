@@ -13,8 +13,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+<<<<<<< HEAD
     "deploy:build": "npm run clean && npm run build",
     "deploy:preview": "npm run build && npm run preview"
+=======
+    "test:visual": "APPLITOOLS_API_KEY=sutfATFMzIOw109FJkhC1007IRRGLhDn9Dl93vSuZwHbPmQ110 playwright test --config=playwright.visual.config.ts"
+>>>>>>> 79b60f70126093e09a90d87548ee96469b72df8e
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
@@ -22,6 +26,7 @@
     "@paypal/react-paypal-js": "^9.2.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "antd-claude-skill": "^0.1.8",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
@@ -37,6 +42,8 @@
     "vite": "^6.2.3"
   },
   "devDependencies": {
+    "@applitools/eyes-playwright": "^1.47.0",
+    "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",

@@ -1,8 +1,9 @@
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Send } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { cn } from "../lib/utils";
+import { Meta } from "../components/Meta";
 
 export default function Landing() {
   const { signIn, user, profile, loading } = useAuth();
@@ -24,6 +25,7 @@ export default function Landing() {
 
   return (
     <div className="bg-sb-cream min-h-screen">
+      <Meta />
       {/* Navigation */}
       <nav className="flex justify-between items-center px-12 py-6 bg-white sb-shadow-nav sticky top-0 z-50">
         <div className="flex items-center gap-4">
@@ -35,16 +37,17 @@ export default function Landing() {
              <a href="#features" className="hover:text-sb-green transition-colors">Menu</a>
              <a href="#rewards" className="hover:text-sb-green transition-colors">Growth Rewards</a>
              <a href="#gift" className="hover:text-sb-green transition-colors">Gift Access</a>
+             <Link to="/contact" className="hover:text-sb-green transition-colors">Contact</Link>
           </div>
         </div>
         <div className="flex items-center gap-6">
-          <button 
+          <button
             onClick={handleStart}
             className="px-6 py-2 border border-black rounded-full text-[1.4rem] font-bold sb-button-active"
           >
             Sign in
           </button>
-          <button 
+          <button
             onClick={handleStart}
             className="px-6 py-2 bg-black text-white rounded-full text-[1.4rem] font-bold sb-button-active"
           >

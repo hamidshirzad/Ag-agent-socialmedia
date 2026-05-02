@@ -44,7 +44,7 @@ service cloud.firestore {
         incoming().createdAt == existing().createdAt
       ) && incoming().diff(existing()).affectedKeys().hasOnly([
         'name', 'company', 'niche', 'goals', 'industry', 'onboardingComplete',
-        'plan', 'subscriptionStatus', 'paypalSubscriptionId',
+        'subscriptionStatus', 'paypalSubscriptionId',
         'apiKeys', 'socialAccounts'
       ]);
 

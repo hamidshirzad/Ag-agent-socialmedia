@@ -6,6 +6,12 @@ export interface SocialAccount {
   pageId?: string;
   username?: string;
   connectedAt?: string;
+  // TikTok OAuth fields
+  openId?: string;
+  refreshToken?: string;
+  refreshExpiresIn?: number;
+  expiresIn?: number;
+  scope?: string;
 }
 
 export interface UserProfile {
