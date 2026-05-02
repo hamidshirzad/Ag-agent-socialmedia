@@ -11,6 +11,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const Landing      = lazy(() => import("./pages/Landing"));
+const Contact      = lazy(() => import("./pages/Contact"));
 const Dashboard    = lazy(() => import("./pages/Dashboard"));
 const Onboarding   = lazy(() => import("./pages/Onboarding"));
 const ContentEngine = lazy(() => import("./pages/ContentEngine"));
@@ -47,6 +48,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Wrap><Landing /></Wrap>} />
+            <Route path="/contact" element={<Wrap><Contact /></Wrap>} />
             <Route path="/onboarding" element={<ProtectedRoute requiresOnboarding><Wrap><Onboarding /></Wrap></ProtectedRoute>} />
             <Route path="/dashboard"  element={<ProtectedRoute><Wrap><Dashboard /></Wrap></ProtectedRoute>} />
             <Route path="/campaigns"  element={<ProtectedRoute><Wrap><Campaigns /></Wrap></ProtectedRoute>} />
