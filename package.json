@@ -19,6 +19,7 @@
     "@paypal/react-paypal-js": "^9.2.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "antd-claude-skill": "^0.1.8",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
