@@ -38,7 +38,7 @@
 
 @layer components {
   .sb-pill {
-    @apply rounded-full;
+    @apply rounded-[50px];
   }
 
   .sb-button-active {

@@ -596,7 +596,7 @@ export default function ContentEngine() {
       </main>
 
       {/* Signature Floating Frap Button */}
-      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-60">
+      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-[60]">
         <Zap className="fill-white w-6 h-6" />
       </button>
     </div>

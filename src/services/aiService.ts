@@ -31,7 +31,7 @@ async function callGemini(prompt: string, userKey?: string) {
   
   // Using the pattern from the existing working code in this project
   const result = await (genAI as any).models.generateContent({
-    model: "gemini-2.0-flash",
+    model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -50,7 +50,7 @@ async function callClaude(prompt: string, userKey?: string) {
   });
   
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
+    model: "claude-3-5-sonnet-20240620",
     max_tokens: 4096,
     messages: [{ role: "user", content: prompt }],
     system: "You are a marketing strategist. Always return valid JSON."

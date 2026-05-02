@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Zap, Target, Globe, Briefcase } from "lucide-react";
-import { doc, updateDoc, collection, writeBatch, serverTimestamp } from "firebase/firestore";
+import { doc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { cn } from "../lib/utils";
 
@@ -46,11 +46,10 @@ export default function Onboarding() {
       );
     }
 
-    const batch = writeBatch(db);
+    // Use a simpler approach for seeding to avoid complex batch logic for now
     for (const rule of defaultRules) {
-      batch.set(doc(rulesCollection), { ...rule, createdAt: serverTimestamp() });
+      await addDoc(rulesCollection, { ...rule, createdAt: serverTimestamp() });
     }
-    await batch.commit();
 
     await updateDoc(userRef, {
       ...data,
@@ -204,7 +203,7 @@ export default function Onboarding() {
               <h2 className="text-[5.6rem] font-bold tracking-sb leading-[0.9] text-sb-green uppercase">{currentStep?.title}</h2>
             </div>
 
-            <div className="min-h-88">
+            <div className="min-h-[22rem]">
               {currentStep?.content}
             </div>
 

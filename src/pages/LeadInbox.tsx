@@ -26,7 +26,6 @@ export default function LeadInbox() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -48,18 +47,13 @@ export default function LeadInbox() {
     return unsubscribe;
   }, [user]);
 
-  const filteredLeads = leads.filter(lead =>
-    lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    lead.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
     <div className="flex h-screen bg-sb-cream text-black font-sans selection:bg-sb-house selection:text-white">
       <Sidebar />
       
       <main className="flex-1 flex overflow-hidden">
         {/* Lead List */}
-        <div className="w-3xl border-r border-black/5 bg-white flex flex-col sb-shadow-nav z-10">
+        <div className="w-[48rem] border-r border-black/5 bg-white flex flex-col sb-shadow-nav z-10">
           <div className="p-10 border-b border-black/5 shrink-0 bg-sb-ceramic/30">
             <h1 className="text-[2.4rem] font-bold uppercase tracking-wider text-sb-green mb-6 flex items-center gap-4">
                <Users size={28} className="text-sb-accent" />
@@ -67,10 +61,8 @@ export default function LeadInbox() {
             </h1>
             <div className="relative">
               <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-sb-green opacity-30" size={18} />
-              <input
+              <input 
                 placeholder="Search leads..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
                 className="w-full bg-sb-cream border-none py-5 pl-16 pr-6 text-[1.4rem] font-bold rounded-full focus:ring-2 focus:ring-sb-accent outline-none transition-all shadow-inner"
               />
             </div>
@@ -79,17 +71,15 @@ export default function LeadInbox() {
           <div className="flex-1 overflow-y-auto">
             {isLoading ? (
               <div className="p-12 text-center opacity-30 text-[1.4rem] font-bold animate-pulse">Syncing Database...</div>
-            ) : filteredLeads.length === 0 ? (
+            ) : leads.length === 0 ? (
               <div className="p-20 text-center">
                  <div className="w-16 h-16 bg-sb-cream rounded-full flex items-center justify-center mx-auto mb-6">
                     <Users size={32} className="text-sb-green opacity-20" />
                  </div>
-                 <p className="text-[1.2rem] font-bold uppercase tracking-widest opacity-30 italic">
-                   {searchQuery ? "No leads match your search." : "No leads captured yet."}
-                 </p>
+                 <p className="text-[1.2rem] font-bold uppercase tracking-widest opacity-30 italic">No leads captured yet.</p>
               </div>
             ) : (
-              filteredLeads.map((lead) => (
+              leads.map((lead) => (
                 <button
                   key={lead.id}
                   onClick={() => setSelectedLead(lead)}
@@ -167,7 +157,7 @@ export default function LeadInbox() {
                              </div>
                              
                              <div className="flex gap-8 relative justify-end">
-                                <div className="p-10 bg-sb-house text-white rounded-[12px] sb-shadow-frap grow max-w-3xl relative before:absolute before:right-[-10px] before:top-6 before:w-5 before:h-5 before:bg-sb-house before:rotate-45">
+                                <div className="p-10 bg-sb-house text-white rounded-[12px] sb-shadow-frap grow max-w-[48rem] relative before:absolute before:right-[-10px] before:top-6 before:w-5 before:h-5 before:bg-sb-house before:rotate-45">
                                    <p className="text-[1.6rem] leading-relaxed mb-4 font-medium tracking-sb">Hi {selectedLead.name.split(' ')[0]}, I've analyzed your request. Based on your goals, our Pro Engine could increase your reach by 4x. Would you like a guided demo?</p>
                                    <p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-gold">AI Protocol / Auto Output</p>
                                 </div>
@@ -217,7 +207,7 @@ export default function LeadInbox() {
                     <Users size={48} className="text-sb-green opacity-20" />
                   </div>
                   <h3 className="text-[3.2rem] font-bold uppercase tracking-widest text-sb-green opacity-10">Nexus Standby</h3>
-                  <p className="max-w-lg text-[1.6rem] text-black/20 mt-6 leading-relaxed font-medium italic uppercase tracking-widest">Select a lead from the registry to view neural analysis and interaction history.</p>
+                  <p className="max-w-[32rem] text-[1.6rem] text-black/20 mt-6 leading-relaxed font-medium italic uppercase tracking-widest">Select a lead from the registry to view neural analysis and interaction history.</p>
                </div>
              )}
            </AnimatePresence>
@@ -225,7 +215,7 @@ export default function LeadInbox() {
       </main>
 
       {/* Signature Floating Frap Button */}
-      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-60">
+      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-[60]">
         <Zap className="fill-white w-6 h-6" />
       </button>
     </div>
