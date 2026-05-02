@@ -1,400 +1,293 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { useAuth } from "../contexts/AuthContext";
-import { Shield, Save, Zap, Trash2, Link2, Unlink, ChevronDown, ChevronUp, ExternalLink, Bot, MessageSquare } from "lucide-react";
+import { Shield, Smartphone, Globe, CreditCard, Bell, Save, Zap, Trash2, Eye, EyeOff } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { cn } from "../lib/utils";
-import { SocialAccount } from "../types";
-
-const PLATFORMS = [
-  {
-    id: "linkedin",
-    name: "LinkedIn",
-    icon: "🔗",
-    color: "text-blue-500",
-    description: "Post to LinkedIn Pages & profiles. Requires a LinkedIn Page Access Token.",
-    docsUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/getting-started",
-    fields: [
-      { key: "accessToken", label: "Page Access Token", placeholder: "AQV..." },
-      { key: "pageId", label: "Organization URN / Page ID", placeholder: "urn:li:organization:..." },
-    ],
-  },
-  {
-    id: "x",
-    name: "X / Twitter",
-    icon: "𝕏",
-    color: "text-white",
-    description: "Post tweets and threads via the X API v2.",
-    docsUrl: "https://developer.twitter.com/en/docs/twitter-api",
-    fields: [
-      { key: "apiKey", label: "API Key", placeholder: "Enter X API Key" },
-      { key: "apiSecret", label: "API Secret", placeholder: "Enter X API Secret" },
-      { key: "accessToken", label: "Access Token", placeholder: "Enter Access Token" },
-    ],
-  },
-  {
-    id: "meta",
-    name: "Meta (Facebook / Instagram)",
-    icon: "📘",
-    color: "text-blue-400",
-    description: "Post to Facebook Pages and Instagram Business accounts via Meta Graph API.",
-    docsUrl: "https://developers.facebook.com/docs/graph-api",
-    fields: [
-      { key: "accessToken", label: "Page Access Token", placeholder: "EAABs..." },
-      { key: "pageId", label: "Page ID", placeholder: "123456789" },
-    ],
-  },
-  {
-    id: "tiktok",
-    name: "TikTok",
-    icon: "🎵",
-    color: "text-pink-400",
-    description: "Schedule and post videos via TikTok for Business API.",
-    docsUrl: "https://developers.tiktok.com/doc/overview",
-    fields: [
-      { key: "accessToken", label: "Access Token", placeholder: "act.xxx..." },
-    ],
-  },
-];
 
 export default function Settings() {
   const { profile, refreshProfile } = useAuth();
-
-  const [apiKeys, setApiKeys] = useState({
-    openai: profile?.apiKeys?.openai || "",
-    anthropic: profile?.apiKeys?.anthropic || "",
-    gemini: profile?.apiKeys?.gemini || "",
-  });
-
   const [formData, setFormData] = useState({
     name: profile?.name || "",
     company: profile?.company || "",
-  });
-
-  // Social account credential state — keyed by platform id
-  const [socialForms, setSocialForms] = useState<Record<string, Record<string, string>>>(() => {
-    const initial: Record<string, Record<string, string>> = {};
-    for (const p of PLATFORMS) {
-      const existing = profile?.socialAccounts?.[p.id as keyof typeof profile.socialAccounts] || {};
-      const form: Record<string, string> = {};
-      for (const f of p.fields) {
-        form[f.key] = (existing as any)[f.key] || "";
-      }
-      initial[p.id] = form;
+    niche: profile?.niche || "",
+    apiKeys: {
+      openai: profile?.apiKeys?.openai || "",
+      anthropic: profile?.apiKeys?.anthropic || "",
+      gemini: profile?.apiKeys?.gemini || ""
     }
-    return initial;
   });
 
-  const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
-  const [savingPlatform, setSavingPlatform] = useState<string | null>(null);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const maskKey = (key: string) => {
+    if (!key) return "";
+    if (key.length <= 4) return key;
+    return `•••• •••• •••• ${key.slice(-4)}`;
+  };
 
-  const isConnected = (platformId: string) =>
-    !!profile?.socialAccounts?.[platformId as keyof typeof profile.socialAccounts]?.connected;
-
-  const handleConnectPlatform = async (platformId: string) => {
-    if (!profile?.id) return;
-    setSavingPlatform(platformId);
-    try {
-      const form = socialForms[platformId];
-      const hasCredentials = Object.values(form).some(v => (v as string).trim() !== "");
-      if (!hasCredentials) {
-        alert("Please enter at least one credential before connecting.");
-        return;
+  const handleClearKey = (provider: 'openai' | 'anthropic' | 'gemini') => {
+    setFormData({
+      ...formData,
+      apiKeys: {
+        ...formData.apiKeys,
+        [provider]: ""
       }
-      const account: SocialAccount = {
-        ...form,
-        connected: true,
-        connectedAt: new Date().toISOString(),
-      };
-      await updateDoc(doc(db, "users", profile.id), {
-        [`socialAccounts.${platformId}`]: account,
-      });
-      await refreshProfile();
-      setExpandedPlatform(null);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save connection. Check Firestore rules or your network.");
-    } finally {
-      setSavingPlatform(null);
+    });
+  };
+
+  const handleConnect = async (platform: 'linkedin' | 'x' | 'meta' | 'tiktok') => {
+    if (!profile?.id) return;
+    
+    try {
+      // 1. Fetch OAuth URL from server
+      const response = await fetch(`/api/auth/url/${platform}?userId=${profile.id}`);
+      if (!response.ok) throw new Error("Failed to get auth URL");
+      
+      const { url } = await response.json();
+
+      // 2. Open Popup
+      const width = 600, height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      const popup = window.open(
+        url, 
+        `Connect ${platform}`, 
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+      if (!popup) {
+        alert("Neural bridge blocked by security filter. Please allow popups.");
+      }
+    } catch (error) {
+      console.error("OAuth Bridge Error:", error);
+      alert("Failed to establish neural link.");
     }
   };
 
-  const handleDisconnect = async (platformId: string) => {
-    if (!profile?.id) return;
-    setSavingPlatform(platformId);
-    try {
-      await updateDoc(doc(db, "users", profile.id), {
-        [`socialAccounts.${platformId}`]: { connected: false },
-      });
-      await refreshProfile();
-      setSocialForms(prev => ({
-        ...prev,
-        [platformId]: Object.fromEntries(
-          PLATFORMS.find(p => p.id === platformId)!.fields.map(f => [f.key, ""])
-        ),
-      }));
-    } catch (err) {
-      console.error(err);
-      alert("Failed to disconnect platform.");
-    } finally {
-      setSavingPlatform(null);
-    }
+  // Listen for OAuth Success from Popup
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Security check: validate origin if possible, but '*' is used in postMessage for simplicity in this dev environment
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        console.log(`Relay synchronized for platform: ${event.data.platform}`);
+        refreshProfile();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [refreshProfile]);
+
+  const handleDisconnect = async (platform: string) => {
+     if (!profile?.id) return;
+     if (!window.confirm(`Are you sure you want to sever the neural link with ${platform}?`)) return;
+     
+     const userRef = doc(db, "users", profile.id);
+     const updatedAccounts = (profile.socialAccounts || []).filter(a => a.platform !== platform);
+     
+     try {
+       await updateDoc(userRef, { socialAccounts: updatedAccounts });
+       await refreshProfile();
+     } catch (error) {
+       handleFirestoreError(error, OperationType.UPDATE, `users/${profile.id}`);
+     }
   };
 
-  const handleSaveProfile = async () => {
+  const handleSave = async () => {
     if (!profile?.id) return;
-    setIsSavingProfile(true);
+    const userRef = doc(db, "users", profile.id);
     try {
-      await updateDoc(doc(db, "users", profile.id), {
-        name: formData.name,
-        company: formData.company,
-        apiKeys,
-      });
+      await updateDoc(userRef, formData);
       await refreshProfile();
       alert("Neural Configuration Synchronized.");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to synchronize settings.");
-    } finally {
-      setIsSavingProfile(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${profile.id}`);
     }
   };
-
-  const maskKey = (key: string) =>
-    key.length <= 4 ? key : `•••• •••• ${key.slice(-4)}`;
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
       <Sidebar />
-      <main className="flex-1 p-12 lg:p-24 max-w-7xl overflow-y-auto">
+      <main className="flex-1 p-12 lg:p-24 max-w-7xl">
         <header className="mb-16 pb-10 border-b border-black/5">
           <h1 className="text-[4.8rem] font-bold text-sb-green tracking-sb mb-2 uppercase">Configuration</h1>
           <p className="text-black/40 text-[1.6rem] font-medium italic">Adjust Neural Parameters & Integrations</p>
         </header>
 
         <div className="space-y-20">
-
           {/* AI Engine Keys */}
           <section className="bg-sb-house text-white rounded-[12px] p-12 lg:p-16 sb-shadow-frap border-b-4 border-sb-gold">
             <h2 className="text-[2.1rem] font-bold mb-10 flex items-center gap-4 uppercase tracking-wider">
               <Zap size={24} className="text-sb-gold fill-sb-gold" /> AI Engine Credentials
             </h2>
             <p className="text-white/60 text-[1.4rem] mb-12 italic font-medium">
-              Activate higher resonance by connecting your professional AI instances.
+              Activate higher resonance by connecting your professional AI instances. These keys are stored in your private vault.
             </p>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              {(["gemini", "anthropic", "openai"] as const).map(provider => (
-                <div key={provider} className="group">
-                  <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2">
-                    {provider === "gemini" ? "Gemini API Key" : provider === "anthropic" ? "Claude (Anthropic) Key" : "OpenAI Key"}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="password"
-                      placeholder={`Enter ${provider} key`}
-                      value={apiKeys[provider] && apiKeys[provider] === profile?.apiKeys?.[provider]
-                        ? maskKey(apiKeys[provider])
-                        : apiKeys[provider]}
-                      onChange={e => setApiKeys({ ...apiKeys, [provider]: e.target.value })}
-                      className="w-full bg-white/5 border-2 border-white/10 rounded-[12px] p-5 pr-14 text-[1.4rem] font-bold focus:bg-white/10 focus:border-sb-gold transition-all outline-none"
-                    />
-                    {apiKeys[provider] && (
-                      <button
-                        onClick={() => setApiKeys({ ...apiKeys, [provider]: "" })}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    )}
-                  </div>
+              <div className="group">
+                <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2">Gemini API Key</label>
+                <div className="relative">
+                  <input 
+                    type={formData.apiKeys.gemini && formData.apiKeys.gemini === profile?.apiKeys?.gemini ? "text" : "password"}
+                    placeholder="Enter Gemini Key"
+                    value={formData.apiKeys.gemini && formData.apiKeys.gemini === profile?.apiKeys?.gemini ? maskKey(formData.apiKeys.gemini) : formData.apiKeys.gemini}
+                    onChange={e => setFormData({...formData, apiKeys: {...formData.apiKeys, gemini: e.target.value}})}
+                    className="w-full bg-white/5 border-2 border-white/10 rounded-[12px] p-5 pr-14 text-[1.4rem] font-bold focus:bg-white/10 focus:border-sb-gold transition-all outline-none"
+                  />
+                  {formData.apiKeys.gemini && (
+                    <button 
+                      onClick={() => handleClearKey('gemini')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-red-400 transition-colors"
+                      title="Clear Key"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
                 </div>
-              ))}
+              </div>
+              <div className="group">
+                <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2">Claude (Anthropic) Key</label>
+                <div className="relative">
+                  <input 
+                    type={formData.apiKeys.anthropic && formData.apiKeys.anthropic === profile?.apiKeys?.anthropic ? "text" : "password"}
+                    placeholder="Enter Anthropic Key"
+                    value={formData.apiKeys.anthropic && formData.apiKeys.anthropic === profile?.apiKeys?.anthropic ? maskKey(formData.apiKeys.anthropic) : formData.apiKeys.anthropic}
+                    onChange={e => setFormData({...formData, apiKeys: {...formData.apiKeys, anthropic: e.target.value}})}
+                    className="w-full bg-white/5 border-2 border-white/10 rounded-[12px] p-5 pr-14 text-[1.4rem] font-bold focus:bg-white/10 focus:border-sb-gold transition-all outline-none"
+                  />
+                  {formData.apiKeys.anthropic && (
+                    <button 
+                      onClick={() => handleClearKey('anthropic')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-red-400 transition-colors"
+                      title="Clear Key"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="group">
+                <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2">OpenAI Key</label>
+                <div className="relative">
+                  <input 
+                    type={formData.apiKeys.openai && formData.apiKeys.openai === profile?.apiKeys?.openai ? "text" : "password"}
+                    placeholder="Enter OpenAI Key"
+                    value={formData.apiKeys.openai && formData.apiKeys.openai === profile?.apiKeys?.openai ? maskKey(formData.apiKeys.openai) : formData.apiKeys.openai}
+                    onChange={e => setFormData({...formData, apiKeys: {...formData.apiKeys, openai: e.target.value}})}
+                    className="w-full bg-white/5 border-2 border-white/10 rounded-[12px] p-5 pr-14 text-[1.4rem] font-bold focus:bg-white/10 focus:border-sb-gold transition-all outline-none"
+                  />
+                  {formData.apiKeys.openai && (
+                    <button 
+                      onClick={() => handleClearKey('openai')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-red-400 transition-colors"
+                      title="Clear Key"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
+            
             <div className="mt-12 flex items-center gap-4 text-sb-gold/60 text-[1.1rem] font-black uppercase tracking-widest">
               <Shield size={16} /> 256-Bit Neural Encryption Active
             </div>
           </section>
 
-          {/* Social Relay Connections */}
+          {/* Social Connections */}
           <section>
-            <h2 className="text-[1.8rem] font-bold text-sb-green mb-4 flex items-center gap-4 uppercase tracking-wider">
-              <Link2 size={20} className="text-sb-accent" /> Social Relay Connections
+            <h2 className="text-[1.8rem] font-bold text-sb-green mb-10 flex items-center gap-4">
+              <Shield size={20} className="text-sb-accent" /> Social Relays
             </h2>
-            <p className="text-[1.4rem] text-black/40 italic mb-10">
-              Connect your platforms via API credentials. Tokens are stored securely in your private vault.
-            </p>
-            <div className="space-y-6">
-              {PLATFORMS.map(platform => {
-                const connected = isConnected(platform.id);
-                const expanded = expandedPlatform === platform.id;
-                const saving = savingPlatform === platform.id;
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {[
+                { id: 'linkedin' as const, name: "LinkedIn", icon: "🔗" },
+                { id: 'meta' as const, name: "Meta (Graph API)", icon: "📸" },
+                { id: 'x' as const, name: "X (Twitter)", icon: "𝕏" },
+                { id: 'tiktok' as const, name: "TikTok", icon: "🎵" }
+              ].map(s => {
+                const connected = profile?.socialAccounts?.find(a => a.platform === s.id);
                 return (
-                  <div
-                    key={platform.id}
-                    className={cn(
-                      "rounded-[12px] sb-shadow-card overflow-hidden transition-all",
-                      connected ? "bg-white border-l-4 border-sb-accent" : "bg-white"
-                    )}
-                  >
-                    <div className="p-8 flex justify-between items-center">
-                      <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 bg-sb-cream rounded-full flex items-center justify-center text-[2.4rem] shadow-inner shrink-0">
-                          {platform.icon}
-                        </div>
-                        <div>
-                          <h4 className="text-[1.4rem] font-black uppercase tracking-widest text-sb-house">{platform.name}</h4>
-                          <p className={cn(
-                            "text-[1.1rem] font-black uppercase tracking-widest mt-1",
-                            connected ? "text-sb-accent" : "text-black/20"
-                          )}>
-                            {connected ? "● CONNECTED" : "○ DISCONNECTED"}
-                          </p>
-                        </div>
+                  <div key={s.name} className="p-8 bg-white rounded-[12px] sb-shadow-card flex justify-between items-center group transition-all hover:bg-sb-cream/30">
+                    <div className="flex items-center gap-6">
+                      <div className="w-12 h-12 bg-sb-cream rounded-full flex items-center justify-center text-[2.4rem] shadow-inner">
+                        {connected?.avatarUrl ? (
+                          <img src={connected.avatarUrl} alt={s.name} className="w-full h-full rounded-full" />
+                        ) : s.icon}
                       </div>
-                      <div className="flex items-center gap-4">
-                        {connected && (
-                          <button
-                            onClick={() => handleDisconnect(platform.id)}
-                            disabled={saving}
-                            className="flex items-center gap-2 text-[1.1rem] font-black border-2 border-red-200 text-red-400 px-5 py-2 uppercase tracking-widest rounded-full hover:border-red-400 transition-all disabled:opacity-40"
-                          >
-                            <Unlink size={14} /> Sever
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setExpandedPlatform(expanded ? null : platform.id)}
-                          className="flex items-center gap-2 text-[1.1rem] font-black border-2 border-sb-green/10 px-5 py-2 uppercase tracking-widest rounded-full hover:border-sb-green hover:text-sb-green transition-all"
-                        >
-                          {connected ? "Reconfigure" : "Connect"}
-                          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </button>
+                      <div>
+                        <h4 className="text-[1.4rem] font-black uppercase tracking-widest text-sb-house">{s.name}</h4>
+                        <p className={cn(
+                          "text-[1.1rem] font-black uppercase tracking-widest mt-1",
+                          connected ? "text-sb-accent" : "text-black/20"
+                        )}>
+                          {connected ? `SIGNED IN AS @${connected.username}` : "DISCONNECTED"}
+                        </p>
                       </div>
                     </div>
-
-                    {expanded && (
-                      <div className="border-t border-black/5 p-8 bg-sb-cream/30 space-y-6">
-                        <p className="text-[1.3rem] text-black/50 italic">{platform.description}</p>
-                        <a
-                          href={platform.docsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-[1.2rem] font-black text-sb-accent uppercase tracking-widest hover:underline"
-                        >
-                          <ExternalLink size={14} /> API Documentation
-                        </a>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {platform.fields.map(field => (
-                            <div key={field.key}>
-                              <label className="text-[1.1rem] font-black uppercase tracking-widest text-sb-green/60 block mb-2 px-1">
-                                {field.label}
-                              </label>
-                              <input
-                                type="password"
-                                placeholder={field.placeholder}
-                                value={socialForms[platform.id]?.[field.key] || ""}
-                                onChange={e => setSocialForms(prev => ({
-                                  ...prev,
-                                  [platform.id]: { ...prev[platform.id], [field.key]: e.target.value }
-                                }))}
-                                className="w-full bg-white border-2 border-black/10 rounded-[12px] p-4 text-[1.3rem] font-bold focus:border-sb-accent transition-all outline-none"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <button
-                          onClick={() => handleConnectPlatform(platform.id)}
-                          disabled={saving}
-                          className="bg-sb-house text-white px-10 py-5 rounded-full text-[1.3rem] font-black uppercase tracking-widest flex items-center gap-3 hover:bg-sb-green transition-all disabled:opacity-40"
-                        >
-                          {saving ? <Zap className="animate-spin" size={18} /> : <Link2 size={18} />}
-                          {saving ? "Connecting..." : connected ? "Update Connection" : "Activate Relay"}
-                        </button>
-                      </div>
-                    )}
+                    <button 
+                      onClick={() => connected ? handleDisconnect(s.id) : handleConnect(s.id)}
+                      className={cn(
+                        "text-[1.1rem] font-black border-2 px-5 py-2 uppercase tracking-widest rounded-full transition-all sb-button-active",
+                        connected ? "border-red-400/20 text-red-400 hover:bg-red-50" : "border-sb-green/10 text-sb-green hover:border-sb-green"
+                      )}
+                    >
+                      {connected ? "Sever Link" : "Connect"}
+                    </button>
                   </div>
-                );
+                )
               })}
             </div>
           </section>
 
-          {/* Agent Autonomy Settings */}
-          <section className="bg-white rounded-[12px] sb-shadow-card p-12 lg:p-16">
-            <h2 className="text-[2.1rem] font-bold text-sb-green mb-4 uppercase tracking-wider flex items-center gap-4">
-              <Bot size={22} className="text-sb-accent" /> Agent Autonomy
-            </h2>
-            <p className="text-[1.4rem] text-black/40 italic mb-10">
-              These defaults apply to all new posts. You can override per-post in the Content Lab.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="p-8 bg-sb-cream rounded-[12px] flex items-center gap-6">
-                <Bot size={24} className="text-sb-accent shrink-0" />
-                <div>
-                  <p className="text-[1.4rem] font-black uppercase tracking-widest text-sb-house">AI Agent Engagement</p>
-                  <p className="text-[1.2rem] text-black/40 mt-1">Auto-like, comment & amplify on deploy</p>
-                </div>
-              </div>
-              <div className="p-8 bg-sb-cream rounded-[12px] flex items-center gap-6">
-                <MessageSquare size={24} className="text-sb-gold shrink-0" />
-                <div>
-                  <p className="text-[1.4rem] font-black uppercase tracking-widest text-sb-house">Neural Auto-Reply</p>
-                  <p className="text-[1.2rem] text-black/40 mt-1">AI responds to comments & DMs in real time</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Operator Profile */}
+          {/* Profile Settings */}
           <section className="bg-white rounded-[12px] sb-shadow-card p-12 lg:p-16">
             <h2 className="text-[2.1rem] font-bold text-sb-green mb-12 border-b border-black/5 pb-6 uppercase tracking-wider">Operator Profile</h2>
             <div className="space-y-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div>
+                <div className="group">
                   <label className="text-[1.2rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-3 px-2">Full Name</label>
-                  <input
+                  <input 
                     value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    onChange={e => setFormData({...formData, name: e.target.value})}
                     className="w-full bg-sb-cream border-2 border-transparent rounded-[12px] p-5 text-[1.4rem] font-bold focus:bg-white focus:border-sb-accent transition-all outline-none"
                   />
                 </div>
-                <div>
+                <div className="group">
                   <label className="text-[1.2rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-3 px-2">Organization</label>
-                  <input
+                  <input 
                     value={formData.company}
-                    onChange={e => setFormData({ ...formData, company: e.target.value })}
+                    onChange={e => setFormData({...formData, company: e.target.value})}
                     className="w-full bg-sb-cream border-2 border-transparent rounded-[12px] p-5 text-[1.4rem] font-bold focus:bg-white focus:border-sb-accent transition-all outline-none"
                   />
                 </div>
               </div>
-              <button
-                onClick={handleSaveProfile}
-                disabled={isSavingProfile}
-                className="bg-sb-house text-white px-12 py-6 rounded-full text-[1.4rem] font-black uppercase tracking-widest flex items-center gap-4 hover:bg-sb-green hover:shadow-xl transition-all disabled:opacity-40"
+              <button 
+                onClick={handleSave}
+                className="bg-sb-house text-white px-12 py-6 rounded-full text-[1.4rem] font-black uppercase tracking-widest flex items-center gap-4 hover:bg-sb-green hover:shadow-xl transition-all sb-button-active"
               >
-                {isSavingProfile ? <Zap className="animate-spin" size={18} /> : <Save size={18} />}
-                {isSavingProfile ? "Saving..." : "Save Settings"}
+                <Save size={18} /> Save Settings
               </button>
             </div>
           </section>
 
-          {/* Billing */}
+          {/* Billing Status */}
           <section className="p-12 border-2 border-dashed border-sb-house/20 rounded-[12px] bg-sb-ceramic/10">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
-              <div>
-                <h3 className="text-[2.4rem] font-bold text-sb-green uppercase tracking-sb mb-1">{profile?.plan || 'Starter'} Edition</h3>
-                <p className="text-[1.4rem] text-black/40 font-medium italic">Next neural cycle: June 01, 2026</p>
-              </div>
-              <button className="px-10 py-5 bg-white border-2 border-sb-house/10 text-sb-house rounded-full text-[1.3rem] font-black uppercase tracking-widest hover:border-sb-house transition-all sb-button-active shadow-sm">
-                Manage Subscription
-              </button>
-            </div>
+             <div className="flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left">
+                <div>
+                   <h3 className="text-[2.4rem] font-bold text-sb-green uppercase tracking-sb mb-1">{profile?.plan || 'Starter'} Edition</h3>
+                   <p className="text-[1.4rem] text-black/40 font-medium italic">Next neural cycle: June 01, 2026</p>
+                </div>
+                <button className="px-10 py-5 bg-white border-2 border-sb-house/10 text-sb-house rounded-full text-[1.3rem] font-black uppercase tracking-widest hover:border-sb-house transition-all sb-button-active shadow-sm">
+                   Manage Subscription
+                </button>
+             </div>
           </section>
-
         </div>
       </main>
 
+      {/* Signature Floating Frap Button */}
       <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-[60]">
         <Zap className="fill-white w-6 h-6" />
       </button>

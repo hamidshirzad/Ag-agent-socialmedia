@@ -21,7 +21,9 @@ import {
   Users,
   Rocket,
   ShieldCheck,
-  Target as TargetIcon
+  Target as TargetIcon,
+  Image as ImageIcon,
+  Sparkles
 } from "lucide-react";
 import { 
   collection, 
@@ -34,7 +36,7 @@ import {
   updateDoc,
   serverTimestamp 
 } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { Campaign } from "../types";
 import { cn } from "../lib/utils";
@@ -150,6 +152,19 @@ export default function Campaigns() {
     }
   };
 
+  const handleGenerateImage = async (id: string, name: string, niche: string) => {
+    const prompt = `Professional high-tech marketing campaign visual for ${name} in the ${niche} industry, cinematic lighting, minimalist aesthetic, futuristic, 4k`;
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=800&height=400&nologo=true&seed=${Math.floor(Math.random() * 100000)}`;
+    
+    try {
+      await updateDoc(doc(db, "campaigns", id), {
+        imageUrl: imageUrl
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `campaigns/${id}`);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
       <Sidebar />
@@ -187,36 +202,60 @@ export default function Campaigns() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   className={cn(
-                    "relative group bg-white p-10 rounded-[12px] border-2 transition-all sb-shadow-card",
+                    "relative group bg-white p-0 rounded-[12px] border-2 transition-all sb-shadow-card overflow-hidden",
                     campaign.active ? "border-sb-gold/20" : "border-black/5 opacity-60 grayscale"
                   )}
                 >
-                  <div className="flex justify-between items-start mb-8">
-                     <div className={cn(
-                        "w-14 h-14 rounded-full flex items-center justify-center shadow-inner",
-                        campaign.active ? "bg-sb-gold/10 text-sb-gold" : "bg-black/5 text-black/40"
-                     )}>
-                        <Target size={24} />
-                     </div>
-                     <div className="flex gap-2">
-                        <button 
-                          onClick={() => toggleCampaignStatus(campaign.id, campaign.active)}
-                          className="p-3 bg-sb-cream rounded-full hover:bg-white border border-black/5 transition-all"
-                        >
-                           {campaign.active ? <XCircle size={14} className="text-red-500" /> : <CheckCircle2 size={14} className="text-sb-accent" />}
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteCampaign(campaign.id)}
-                          className="p-3 bg-sb-cream rounded-full hover:bg-red-50 border border-black/5 transition-all text-red-400"
-                        >
-                           <Trash2 size={14} />
-                        </button>
-                     </div>
+                  <div className="relative h-48 w-full bg-sb-cream overflow-hidden group/img">
+                    {campaign.imageUrl ? (
+                      <img 
+                        src={campaign.imageUrl} 
+                        alt={campaign.name} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-sb-green/20">
+                         <ImageIcon size={48} className="mb-2" />
+                         <span className="text-[1rem] font-black uppercase tracking-widest">No Visual identity</span>
+                      </div>
+                    )}
+                    <button 
+                       onClick={() => handleGenerateImage(campaign.id, campaign.name, campaign.niche)}
+                       className="absolute top-4 right-4 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-xl opacity-0 group-hover/img:opacity-100 transition-all hover:bg-sb-gold hover:text-white"
+                       title="Generate Neural Visual"
+                    >
+                       <Sparkles size={16} />
+                    </button>
+                    <div className="absolute top-4 left-4 flex gap-2">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center shadow-inner bg-white/90 backdrop-blur-sm",
+                        campaign.active ? "text-sb-gold" : "text-black/40"
+                      )}>
+                        <Target size={18} />
+                      </div>
+                    </div>
                   </div>
 
-                  <h3 className="text-[2.2rem] font-bold text-sb-green mb-2 uppercase tracking-tight truncate">
-                    {campaign.name}
-                  </h3>
+                  <div className="p-10 pt-8">
+                    <div className="flex justify-between items-start mb-6">
+                       <h3 className="text-[2.2rem] font-bold text-sb-green uppercase tracking-tight truncate flex-1">
+                        {campaign.name}
+                      </h3>
+                       <div className="flex gap-2 ml-4">
+                          <button 
+                            onClick={() => toggleCampaignStatus(campaign.id, campaign.active)}
+                            className="p-3 bg-sb-cream rounded-full hover:bg-white border border-black/5 transition-all"
+                          >
+                             {campaign.active ? <XCircle size={14} className="text-red-500" /> : <CheckCircle2 size={14} className="text-sb-accent" />}
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteCampaign(campaign.id)}
+                            className="p-3 bg-sb-cream rounded-full hover:bg-red-50 border border-black/5 transition-all text-red-400"
+                          >
+                             <Trash2 size={14} />
+                          </button>
+                       </div>
+                    </div>
                   
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 text-[1.2rem] font-black uppercase tracking-widest text-sb-green/40">
@@ -310,6 +349,7 @@ export default function Campaigns() {
                         </div>
                      </div>
                   </div>
+                </div>
                 </motion.div>
               ))}
             </AnimatePresence>

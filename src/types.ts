@@ -1,13 +1,3 @@
-export interface SocialAccount {
-  connected: boolean;
-  accessToken?: string;
-  apiKey?: string;
-  apiSecret?: string;
-  pageId?: string;
-  username?: string;
-  connectedAt?: string;
-}
-
 export interface UserProfile {
   id: string;
   name: string;
@@ -15,7 +5,6 @@ export interface UserProfile {
   company?: string;
   niche?: string;
   goals?: string;
-  industry?: string;
   plan: 'starter' | 'pro' | 'agency';
   subscriptionStatus: string;
   paypalSubscriptionId?: string;
@@ -27,11 +16,13 @@ export interface UserProfile {
     gemini?: string;
   };
   socialAccounts?: {
-    linkedin?: SocialAccount;
-    x?: SocialAccount;
-    meta?: SocialAccount;
-    tiktok?: SocialAccount;
-  };
+    platform: 'linkedin' | 'x' | 'meta' | 'tiktok';
+    accessToken: string;
+    username: string;
+    avatarUrl?: string;
+    autoReply: boolean;
+    agentEngagement: boolean;
+  }[];
 }
 
 export interface Post {
@@ -43,11 +34,14 @@ export interface Post {
   platforms: string[];
   caption: string;
   mediaUrl?: string;
-  scheduledAt?: string;
-  autoReply?: boolean;
-  agentEngagement?: boolean;
+  scheduledAt: any; // Firestore Timestamp or ISO String
   status: 'draft' | 'scheduled' | 'posted';
   createdAt: string;
+  metrics?: {
+    views: number;
+    clicks: number;
+    engagements: number;
+  };
 }
 
 export interface Lead {
@@ -78,6 +72,7 @@ export interface Campaign {
   niche: string;
   goals: string;
   active: boolean;
+  imageUrl?: string;
   variations?: {
     id: string;
     name: string;

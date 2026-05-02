@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { motion, AnimatePresence } from "motion/react";
-import { Zap, Send, RotateCcw, Video, FileText, Share2, Sparkles, CheckCircle2, Brain, Database, Shield, Calendar, Clock, Target, FlaskConical, MessageSquare, Bot, Link2 } from "lucide-react";
+import { Zap, Send, RotateCcw, Video, FileText, Share2, Sparkles, CheckCircle2, Brain, Database, Shield, Calendar, Clock, Target, FlaskConical } from "lucide-react";
 import { generateMarketingContent } from "../services/geminiService";
 import { useAuth } from "../contexts/AuthContext";
 import { cn } from "../lib/utils";
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, Timestamp } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { Campaign } from "../types";
 
 export default function ContentEngine() {
@@ -24,8 +24,8 @@ export default function ContentEngine() {
   // Distribution State
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [scheduleDate, setScheduleDate] = useState("");
-  const [autoReply, setAutoReply] = useState(false);
-  const [agentEngagement, setAgentEngagement] = useState(false);
+  const [autoReply, setAutoReply] = useState(true);
+  const [agentEngagement, setAgentEngagement] = useState(true);
   const [isDeploying, setIsDeploying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -110,8 +110,6 @@ export default function ContentEngine() {
           platforms: platformsToSave[0] === 'general' ? [] : [platform],
           caption,
           mediaUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(result.suggestedImagePrompt)}?width=1280&height=720&seed=${result.imageSeed || 42}&nologo=true`,
-          autoReply,
-          agentEngagement,
           status: 'draft',
           createdAt: serverTimestamp()
         });
@@ -120,8 +118,7 @@ export default function ContentEngine() {
       await Promise.all(savePromises);
       alert("Neural Artifact Saved! Content archived in your local library.");
     } catch (err) {
-      console.error(err);
-      alert("System failure during archival. Neural bridge error.");
+      handleFirestoreError(err, OperationType.CREATE, "posts");
     } finally {
       setIsSaving(false);
     }
@@ -133,32 +130,24 @@ export default function ContentEngine() {
       return;
     }
 
-    if (isNaN(new Date(scheduleDate).getTime())) {
-      alert("Invalid schedule date. Please select a valid date and time.");
-      return;
-    }
-    const scheduledTimestamp = Timestamp.fromDate(new Date(scheduleDate));
-
     setIsDeploying(true);
     try {
       const postsCol = collection(db, "posts");
-
+      const scheduledTimestamp = Timestamp.fromDate(new Date(scheduleDate));
+      
       const deploymentPromises = selectedPlatforms.map(platform => {
         let caption = "";
         let type: 'video' | 'image' | 'text' = 'text';
-
-        if (platform === 'linkedin') {
-          caption = result.linkedinPost;
-          type = 'text';
-        } else if (platform === 'x') {
-          caption = result.xThread;
-          type = 'text';
-        } else if (platform === 'tiktok') {
-          caption = result.tiktokScript;
-          type = 'video';
-        } else if (platform === 'meta') {
-          caption = result.linkedinPost;
-          type = 'image';
+        
+        if (platform === 'linkedin') { 
+          caption = result.linkedinPost; 
+          type = 'text'; 
+        } else if (platform === 'x') { 
+          caption = result.xThread; 
+          type = 'text'; 
+        } else if (platform === 'tiktok') { 
+          caption = result.tiktokScript; 
+          type = 'video'; 
         }
 
         return addDoc(postsCol, {
@@ -182,11 +171,8 @@ export default function ContentEngine() {
       setResult(null);
       setSelectedPlatforms([]);
       setScheduleDate("");
-      setAutoReply(false);
-      setAgentEngagement(false);
     } catch (err) {
-      console.error(err);
-      alert("Deployment failed. Neural bridge synchronization error.");
+      handleFirestoreError(err, OperationType.CREATE, "posts");
     } finally {
       setIsDeploying(false);
     }
@@ -429,109 +415,70 @@ export default function ContentEngine() {
                             <h4 className="text-[1.2rem] font-black uppercase tracking-widest text-sb-gold">Neural Distribution</h4>
                           </div>
                           <div className="space-y-6">
-                            {/* Platform selector — shows connected badge */}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-3 gap-4">
                               {[
                                 { id: 'linkedin', label: 'LinkedIn', icon: FileText },
-                                { id: 'x', label: 'X / Twitter', icon: Share2 },
-                                { id: 'tiktok', label: 'TikTok', icon: Video },
-                                { id: 'meta', label: 'Meta / IG', icon: Send }
-                              ].map((plat) => {
-                                const isConnected = !!profile?.socialAccounts?.[plat.id as keyof typeof profile.socialAccounts]?.connected;
-                                const isSelected = selectedPlatforms.includes(plat.id);
-                                return (
-                                  <button
-                                    key={plat.id}
-                                    onClick={() => {
-                                      setSelectedPlatforms(prev =>
-                                        prev.includes(plat.id) ? prev.filter(p => p !== plat.id) : [...prev, plat.id]
-                                      );
-                                    }}
-                                    className={cn(
-                                      "py-5 rounded-[12px] text-[1rem] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-2 relative",
-                                      isSelected ? "bg-sb-accent border-sb-accent text-white" : "bg-white/5 border-white/10 text-white/40 hover:border-white/20"
-                                    )}
-                                  >
-                                    <plat.icon size={18} />
-                                    {plat.label}
-                                    {isConnected && (
-                                      <span className="absolute top-2 right-2 w-2 h-2 bg-sb-accent rounded-full" title="Connected" />
-                                    )}
-                                  </button>
-                                );
-                              })}
+                                { id: 'x', label: 'X Thread', icon: Share2 },
+                                { id: 'tiktok', label: 'TikTok', icon: Video }
+                              ].map((plat) => (
+                                <button
+                                  key={plat.id}
+                                  onClick={() => {
+                                    setSelectedPlatforms(prev => 
+                                      prev.includes(plat.id) ? prev.filter(p => p !== plat.id) : [...prev, plat.id]
+                                    );
+                                  }}
+                                  className={cn(
+                                    "py-5 rounded-[12px] text-[1rem] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-3",
+                                    selectedPlatforms.includes(plat.id) ? "bg-sb-accent border-sb-accent text-white" : "bg-white/5 border-white/10 text-white/40 hover:border-white/20"
+                                  )}
+                                >
+                                  <plat.icon size={18} />
+                                  {plat.label}
+                                </button>
+                              ))}
                             </div>
 
-                            {selectedPlatforms.some(p => !profile?.socialAccounts?.[p as keyof typeof profile.socialAccounts]?.connected) && (
-                              <p className="text-[1.1rem] text-sb-gold/80 font-bold flex items-center gap-2 px-2">
-                                <Link2 size={12} /> Some selected platforms aren't connected — configure in Settings.
-                              </p>
-                            )}
-
-                            {/* Schedule date/time */}
                             <div className="group">
                               <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2 flex items-center gap-2">
                                 <Clock size={12} /> Schedule Deployment
                               </label>
-                              <input
+                              <input 
                                 type="datetime-local"
                                 value={scheduleDate}
                                 onChange={(e) => setScheduleDate(e.target.value)}
-                                min={new Date().toISOString().slice(0, 16)}
                                 className="w-full bg-white/5 border-2 border-white/10 rounded-[12px] p-5 text-[1.4rem] font-bold text-white focus:bg-white/10 focus:border-sb-gold transition-all outline-none [color-scheme:dark]"
                               />
                             </div>
 
-                            {/* AI Agent toggles */}
-                            <div className="space-y-4 pt-2">
-                              <p className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-white/40 px-2 flex items-center gap-2">
-                                <Bot size={12} /> Agent Autonomy
-                              </p>
-                              <div
-                                onClick={() => setAgentEngagement(v => !v)}
-                                className={cn(
-                                  "flex justify-between items-center p-5 rounded-[12px] border-2 cursor-pointer transition-all",
-                                  agentEngagement ? "bg-sb-accent/10 border-sb-accent/40" : "bg-white/5 border-white/10 hover:border-white/20"
-                                )}
-                              >
-                                <div className="flex items-center gap-4">
-                                  <Bot size={16} className={agentEngagement ? "text-sb-accent" : "text-white/30"} />
-                                  <div>
-                                    <p className="text-[1.2rem] font-black uppercase tracking-widest text-white/80">AI Agent Engagement</p>
-                                    <p className="text-[1rem] text-white/30 font-medium">Auto-like, comment & amplify on deploy</p>
-                                  </div>
+                            <div className="pt-4 space-y-4">
+                              <label className="flex items-center justify-between p-4 bg-white/5 rounded-[12px] border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
+                                <div className="flex items-center gap-3">
+                                  <Brain size={16} className={cn(agentEngagement ? "text-sb-gold" : "text-white/20")} />
+                                  <span className="text-[1.1rem] font-black uppercase tracking-widest text-white/80">AI Agent Engagement</span>
                                 </div>
-                                <div className={cn(
-                                  "w-12 h-6 rounded-full transition-all flex items-center px-1",
-                                  agentEngagement ? "bg-sb-accent" : "bg-white/10"
-                                )}>
-                                  <div className={cn("w-4 h-4 rounded-full bg-white transition-all", agentEngagement ? "translate-x-6" : "translate-x-0")} />
+                                <input 
+                                  type="checkbox" 
+                                  checked={agentEngagement} 
+                                  onChange={(e) => setAgentEngagement(e.target.checked)}
+                                  className="w-5 h-5 accent-sb-gold"
+                                />
+                              </label>
+                              <label className="flex items-center justify-between p-4 bg-white/5 rounded-[12px] border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
+                                <div className="flex items-center gap-3">
+                                  <RotateCcw size={16} className={cn(autoReply ? "text-sb-gold" : "text-white/20")} />
+                                  <span className="text-[1.1rem] font-black uppercase tracking-widest text-white/80">Neural Auto-Reply</span>
                                 </div>
-                              </div>
-                              <div
-                                onClick={() => setAutoReply(v => !v)}
-                                className={cn(
-                                  "flex justify-between items-center p-5 rounded-[12px] border-2 cursor-pointer transition-all",
-                                  autoReply ? "bg-sb-gold/10 border-sb-gold/40" : "bg-white/5 border-white/10 hover:border-white/20"
-                                )}
-                              >
-                                <div className="flex items-center gap-4">
-                                  <MessageSquare size={16} className={autoReply ? "text-sb-gold" : "text-white/30"} />
-                                  <div>
-                                    <p className="text-[1.2rem] font-black uppercase tracking-widest text-white/80">Neural Auto-Reply</p>
-                                    <p className="text-[1rem] text-white/30 font-medium">AI responds to comments & DMs</p>
-                                  </div>
-                                </div>
-                                <div className={cn(
-                                  "w-12 h-6 rounded-full transition-all flex items-center px-1",
-                                  autoReply ? "bg-sb-gold" : "bg-white/10"
-                                )}>
-                                  <div className={cn("w-4 h-4 rounded-full bg-white transition-all", autoReply ? "translate-x-6" : "translate-x-0")} />
-                                </div>
-                              </div>
+                                <input 
+                                  type="checkbox" 
+                                  checked={autoReply} 
+                                  onChange={(e) => setAutoReply(e.target.checked)}
+                                  className="w-5 h-5 accent-sb-gold"
+                                />
+                              </label>
                             </div>
                           </div>
-                        </div>
+                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-6 mt-12">
