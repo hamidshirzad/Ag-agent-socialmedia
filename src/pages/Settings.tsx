@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../components/Toast";
 import { Shield, Save, Zap, Trash2, Link2, Unlink, ChevronDown, ChevronUp, ExternalLink, Bot, MessageSquare } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -60,6 +61,7 @@ const PLATFORMS = [
 
 export default function Settings() {
   const { profile, refreshProfile } = useAuth();
+  const toast = useToast();
 
   const [apiKeys, setApiKeys] = useState({
     openai: profile?.apiKeys?.openai || "",
@@ -100,7 +102,7 @@ export default function Settings() {
       const form = socialForms[platformId];
       const hasCredentials = Object.values(form).some(v => (v as string).trim() !== "");
       if (!hasCredentials) {
-        alert("Please enter at least one credential before connecting.");
+        toast.error("Please enter at least one credential before connecting.");
         return;
       }
       const account: SocialAccount = {
@@ -115,7 +117,7 @@ export default function Settings() {
       setExpandedPlatform(null);
     } catch (err) {
       console.error(err);
-      alert("Failed to save connection. Check Firestore rules or your network.");
+      toast.error("Failed to save connection. Check Firestore rules.");
     } finally {
       setSavingPlatform(null);
     }
@@ -137,7 +139,7 @@ export default function Settings() {
       }));
     } catch (err) {
       console.error(err);
-      alert("Failed to disconnect platform.");
+      toast.error("Failed to disconnect platform.");
     } finally {
       setSavingPlatform(null);
     }
@@ -153,10 +155,10 @@ export default function Settings() {
         apiKeys,
       });
       await refreshProfile();
-      alert("Neural Configuration Synchronized.");
+      toast.success("Neural Configuration Synchronized.");
     } catch (err) {
       console.error(err);
-      alert("Failed to synchronize settings.");
+      toast.error("Failed to synchronize settings.");
     } finally {
       setIsSavingProfile(false);
     }

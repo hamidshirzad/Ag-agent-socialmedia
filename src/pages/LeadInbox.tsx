@@ -1,41 +1,41 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { motion, AnimatePresence } from "motion/react";
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Mail, 
-  Calendar, 
+import {
+  Users,
+  Search,
+  Mail,
+  Calendar,
   Star,
   CheckCircle2,
-  Clock,
   ArrowRight,
   Zap,
-  TrendingUp
+  TrendingUp,
+  Send,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
-import { Lead } from "../types";
+import { collection, query, where, onSnapshot, orderBy, addDoc } from "firebase/firestore";
+import { Lead, Message } from "../types";
 import { cn, formatDate } from "../lib/utils";
+import { analyzeLeadIntent } from "../services/geminiService";
 
 export default function LeadInbox() {
   const { user } = useAuth();
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads]               = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading]       = useState(true);
+  const [messages, setMessages]         = useState<Message[]>([]);
+  const [messageText, setMessageText]   = useState("");
+  const [isSending, setIsSending]       = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    
     const q = query(
       collection(db, "leads"),
       where("userId", "==", user.uid),
       orderBy("createdAt", "desc")
     );
-
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
       setLeads(data);
@@ -43,9 +43,48 @@ export default function LeadInbox() {
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, "leads");
     });
-
     return unsubscribe;
   }, [user]);
+
+  useEffect(() => {
+    if (!selectedLead) { setMessages([]); return; }
+    const q = query(
+      collection(db, "leads", selectedLead.id, "messages"),
+      orderBy("timestamp", "asc")
+    );
+    return onSnapshot(q, snap => {
+      setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() } as Message)));
+    }, error => handleFirestoreError(error, OperationType.LIST, `leads/${selectedLead.id}/messages`));
+  }, [selectedLead?.id]);
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedLead) return;
+    setIsSending(true);
+    const content = messageText.trim();
+    setMessageText("");
+    try {
+      await addDoc(collection(db, "leads", selectedLead.id, "messages"), {
+        leadId: selectedLead.id,
+        sender: "user",
+        content,
+        timestamp: new Date().toISOString(),
+      });
+      try {
+        const ai = await analyzeLeadIntent(content);
+        await addDoc(collection(db, "leads", selectedLead.id, "messages"), {
+          leadId: selectedLead.id,
+          sender: "ai",
+          content: ai.suggestedResponse,
+          intent: ai.intent,
+          timestamp: new Date().toISOString(),
+        });
+      } catch { /* AI reply failure is non-fatal */ }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `leads/${selectedLead.id}/messages`);
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-sb-cream text-black font-sans selection:bg-sb-house selection:text-white">
@@ -146,25 +185,60 @@ export default function LeadInbox() {
                        <section>
                           <h4 className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/30 mb-8">Interaction Timeline</h4>
                           <div className="space-y-10 relative before:absolute before:left-7 before:top-4 before:bottom-4 before:w-0.5 before:bg-sb-green/5">
+                             {/* Initial inbound message */}
                              <div className="flex gap-8 relative">
                                 <div className="w-14 h-14 rounded-full bg-sb-house flex items-center justify-center shrink-0 shadow-lg z-10">
-                                   <Star className="text-sb-gold w-6 h-6 fill-sb-gold" />
+                                   <Star className="text-sb-gold w-6 h-6 fill-sb-gold" aria-hidden="true" />
                                 </div>
-                                <div className="p-10 bg-white rounded-[12px] sb-shadow-card grow relative after:absolute after:left-[-10px] after:top-6 after:w-5 after:h-5 after:bg-white after:rotate-45">
+                                <div className="p-10 bg-white rounded-[12px] sb-shadow-card grow">
                                    <p className="text-[1.6rem] leading-relaxed italic text-black/70 mb-4 tracking-sb font-medium">"{selectedLead.initialMessage}"</p>
                                    <p className="text-[1.1rem] font-black text-sb-house/40 uppercase tracking-widest">Inbound Signal / {formatDate(selectedLead.createdAt)}</p>
                                 </div>
                              </div>
-                             
-                             <div className="flex gap-8 relative justify-end">
-                                <div className="p-10 bg-sb-house text-white rounded-[12px] sb-shadow-frap grow max-w-[48rem] relative before:absolute before:right-[-10px] before:top-6 before:w-5 before:h-5 before:bg-sb-house before:rotate-45">
-                                   <p className="text-[1.6rem] leading-relaxed mb-4 font-medium tracking-sb">Hi {selectedLead.name.split(' ')[0]}, I've analyzed your request. Based on your goals, our Pro Engine could increase your reach by 4x. Would you like a guided demo?</p>
-                                   <p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-gold">AI Protocol / Auto Output</p>
-                                </div>
-                                <div className="w-14 h-14 rounded-full bg-sb-accent flex items-center justify-center shrink-0 shadow-lg z-10">
-                                   <Zap className="text-white w-6 h-6 fill-white" />
-                                </div>
-                             </div>
+
+                             {/* Live message thread */}
+                             {messages.map(msg => (
+                               <div key={msg.id} className={cn("flex gap-8 relative", msg.sender === "ai" && "justify-end")}>
+                                 {msg.sender === "user" ? (
+                                   <div className="p-10 bg-sb-ceramic rounded-[12px] grow">
+                                     <p className="text-[1.6rem] leading-relaxed font-medium tracking-sb text-black/80">{msg.content}</p>
+                                     <p className="text-[1.1rem] font-black text-black/30 uppercase tracking-widest mt-3">You</p>
+                                   </div>
+                                 ) : (
+                                   <>
+                                     <div className="p-10 bg-sb-house text-white rounded-[12px] sb-shadow-frap grow max-w-[48rem]">
+                                       <p className="text-[1.6rem] leading-relaxed mb-4 font-medium tracking-sb">{msg.content}</p>
+                                       <p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-gold">
+                                         AI Protocol{msg.intent ? ` · ${msg.intent}` : ""}
+                                       </p>
+                                     </div>
+                                     <div className="w-14 h-14 rounded-full bg-sb-accent flex items-center justify-center shrink-0 shadow-lg z-10">
+                                       <Zap className="text-white w-6 h-6 fill-white" aria-hidden="true" />
+                                     </div>
+                                   </>
+                                 )}
+                               </div>
+                             ))}
+                          </div>
+
+                          {/* Message send form */}
+                          <div className="mt-10 flex gap-4 items-center">
+                             <input
+                               value={messageText}
+                               onChange={e => setMessageText(e.target.value)}
+                               onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+                               placeholder="Reply to lead..."
+                               aria-label="Message to lead"
+                               className="flex-1 bg-white border-2 border-black/10 rounded-full px-8 py-5 text-[1.4rem] font-bold focus:border-sb-accent outline-none focus:ring-2 focus:ring-sb-accent/30 transition-all"
+                             />
+                             <button
+                               onClick={handleSendMessage}
+                               disabled={isSending || !messageText.trim()}
+                               aria-label="Send message"
+                               className="w-14 h-14 bg-sb-accent text-white rounded-full flex items-center justify-center hover:bg-sb-house transition-all disabled:opacity-40 focus:ring-2 focus:ring-sb-accent focus:ring-offset-2 outline-none"
+                             >
+                               <Send size={18} aria-hidden="true" />
+                             </button>
                           </div>
                        </section>
                     </div>
