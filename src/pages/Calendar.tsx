@@ -1,16 +1,51 @@
+import { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Share2, Eye, Edit3, Plus, Zap } from "lucide-react";
+import { ChevronLeft, ChevronRight, Share2, Eye, Edit3, Plus, Zap } from "lucide-react";
 import { cn } from "../lib/utils";
+import { useAuth } from "../contexts/AuthContext";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { Post } from "../types";
 
 export default function Calendar() {
+  const { user } = useAuth();
+  const [posts, setPosts] = useState<Post[]>([]);
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  
-  // Mock calendar items
-  const schedule = [
-    { day: 12, items: [{ type: "LinkedIn", title: "Scale Case Study", time: "09:00" }] },
-    { day: 14, items: [{ type: "TikTok", title: "Morning Tips", time: "18:30" }, { type: "X", title: "Thread: AI Growth", time: "12:00" }] },
-    { day: 15, items: [{ type: "Instagram", title: "Product Reveal", time: "15:00" }] },
-  ];
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, "posts"),
+      where("userId", "==", user.uid),
+      where("status", "==", "scheduled")
+    );
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Post)));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, "posts");
+    });
+    return unsubscribe;
+  }, [user]);
+
+  // Build schedule from real posts for May 2026
+  const schedule = posts.reduce<{ day: number; items: { type: string; title: string; time: string }[] }[]>((acc, post) => {
+    const at = post.scheduledAt;
+    if (!at) return acc;
+    const d = typeof (at as any).toDate === "function" ? (at as any).toDate() : new Date(at as string);
+    if (d.getMonth() !== 4 || d.getFullYear() !== 2026) return acc;
+    const day = d.getDate();
+    const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    const item = {
+      type: post.platforms[0] ?? "Post",
+      title: post.caption.substring(0, 30),
+      time,
+    };
+    const existing = acc.find(s => s.day === day);
+    if (existing) { existing.items.push(item); } else { acc.push({ day, items: [item] }); }
+    return acc;
+  }, []);
+
+  const queuedPosts = posts.slice(0, 5);
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
@@ -50,7 +85,7 @@ export default function Calendar() {
               
               return (
                 <div key={i} className={cn(
-                  "min-h-[16rem] p-6 border-r border-b border-black/5 transition-all relative overflow-hidden",
+                  "min-h-64 p-6 border-r border-b border-black/5 transition-all relative overflow-hidden",
                   dayNum < 1 || dayNum > 31 ? "bg-sb-cream/20" : "hover:bg-sb-cream/40 cursor-pointer"
                 )}>
                   {dayNum > 0 && dayNum <= 31 && (
@@ -91,25 +126,32 @@ export default function Calendar() {
                 <h3 className="text-sb-green font-bold text-[1.4rem] uppercase tracking-widest flex items-center gap-3">
                   <Eye size={18} className="fill-sb-green" /> Scheduled Queue
                 </h3>
-                <span className="text-[1rem] bg-sb-house text-white px-3 py-1 sb-pill font-black tracking-widest uppercase">3 Pending</span>
+                <span className="text-[1rem] bg-sb-house text-white px-3 py-1 sb-pill font-black tracking-widest uppercase">{posts.length} Pending</span>
               </div>
               <div className="p-0">
-                 {[1,2,3].map(i => (
-                   <div key={i} className="flex justify-between items-center p-8 border-b border-black/5 hover:bg-sb-cream/30 transition-all group">
+                {queuedPosts.length === 0 ? (
+                  <p className="p-8 text-center text-[1.2rem] font-bold uppercase tracking-widest opacity-30 italic">No scheduled posts.</p>
+                ) : queuedPosts.map((post) => {
+                  const at = post.scheduledAt;
+                  const d = at ? (typeof (at as any).toDate === "function" ? (at as any).toDate() : new Date(at as string)) : null;
+                  const dateLabel = d ? `${d.toLocaleString('default', { month: 'short' })} ${d.getDate()}` : "—";
+                  return (
+                    <div key={post.id} className="flex justify-between items-center p-8 border-b border-black/5 hover:bg-sb-cream/30 transition-all group">
                       <div className="flex items-center gap-6">
-                         <div className="w-16 h-16 bg-sb-ceramic rounded-[8px] overflow-hidden flex items-center justify-center">
-                            <Share2 size={24} className="text-sb-green/20" />
-                         </div>
-                         <div>
-                            <p className="text-[1.4rem] font-bold uppercase tracking-tight text-sb-green mb-1">Post Title {i}</p>
-                            <p className="text-[1.2rem] opacity-50 font-medium italic">Ready for distribution on May 1{i}</p>
-                         </div>
+                        <div className="w-16 h-16 bg-sb-ceramic rounded-[8px] overflow-hidden flex items-center justify-center">
+                          <Share2 size={24} className="text-sb-green/20" />
+                        </div>
+                        <div>
+                          <p className="text-[1.4rem] font-bold uppercase tracking-tight text-sb-green mb-1 truncate max-w-[24rem]">{post.caption || "Untitled Post"}</p>
+                          <p className="text-[1.2rem] opacity-50 font-medium italic">{post.platforms.join(", ")} · {dateLabel}</p>
+                        </div>
                       </div>
                       <button className="w-12 h-12 flex items-center justify-center bg-sb-cream rounded-full text-sb-green opacity-0 group-hover:opacity-100 transition-all sb-button-active">
                         <Edit3 size={18} />
                       </button>
-                   </div>
-                 ))}
+                    </div>
+                  );
+                })}
               </div>
            </div>
 
@@ -127,7 +169,7 @@ export default function Calendar() {
       </main>
 
       {/* Signature Floating Frap Button */}
-      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-[60]">
+      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-60">
         <Zap className="fill-white w-6 h-6" />
       </button>
     </div>

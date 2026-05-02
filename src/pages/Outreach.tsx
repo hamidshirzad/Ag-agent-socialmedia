@@ -1,10 +1,64 @@
-import { useState } from "react";
+import { useState, useRef, type ChangeEvent } from "react";
 import { Sidebar } from "../components/Sidebar";
-import { Upload, Mail, CheckCircle, Send, Play, BarChart2, Zap } from "lucide-react";
-import { cn } from "../lib/utils";
+import { Upload, Play, BarChart2, Zap, CheckCircle2 } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
+import { collection, addDoc } from "firebase/firestore";
 
 export default function Outreach() {
+  const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
+  const [importedCount, setImportedCount] = useState<number | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setIsUploading(true);
+    setImportedCount(null);
+    setImportError(null);
+
+    try {
+      const text = await file.text();
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) throw new Error("CSV must have a header row and at least one data row.");
+
+      const headers = lines[0].toLowerCase().split(",").map(h => h.trim().replace(/^"|"$/g, ""));
+      const nameIdx = headers.findIndex(h => h.includes("name"));
+      const emailIdx = headers.findIndex(h => h.includes("email"));
+      const sourceIdx = headers.findIndex(h => h.includes("source"));
+
+      const leadsCol = collection(db, "leads");
+      const writes = lines.slice(1)
+        .map(line => line.split(",").map(c => c.trim().replace(/^"|"$/g, "")))
+        .filter(cols => cols.some(Boolean))
+        .map(cols => {
+          const name = cols[nameIdx >= 0 ? nameIdx : 0] ?? "Unknown";
+          const email = cols[emailIdx >= 0 ? emailIdx : 1] ?? "";
+          const source = cols[sourceIdx >= 0 ? sourceIdx : 2] ?? "csv-import";
+          return addDoc(leadsCol, {
+            userId: user.uid,
+            name,
+            email,
+            source: source || "csv-import",
+            score: 0,
+            status: "new",
+            createdAt: new Date().toISOString(),
+          });
+        });
+
+      await Promise.all(writes);
+      setImportedCount(writes.length);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, "leads");
+      setImportError(err instanceof Error ? err.message : "Import failed.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
@@ -19,18 +73,37 @@ export default function Outreach() {
           <div className="lg:col-span-2 space-y-16">
             {/* Upload Area */}
             <div className="bg-white border-2 border-dashed border-sb-green/20 rounded-[12px] p-24 flex flex-col items-center justify-center text-center sb-shadow-card">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
               <div className="w-24 h-24 bg-sb-cream rounded-full flex items-center justify-center mb-8">
-                <Upload size={40} className="text-sb-green/20" />
+                {importedCount !== null
+                  ? <CheckCircle2 size={40} className="text-sb-accent" />
+                  : <Upload size={40} className="text-sb-green/20" />
+                }
               </div>
               <h3 className="text-[2.4rem] font-bold text-sb-green mb-4 uppercase tracking-sb">Import Target Data</h3>
+              {importedCount !== null && (
+                <p className="text-[1.4rem] font-bold text-sb-accent mb-4 uppercase tracking-widest">
+                  {importedCount} leads imported successfully
+                </p>
+              )}
+              {importError && (
+                <p className="text-[1.3rem] font-bold text-red-500 mb-4">{importError}</p>
+              )}
               <p className="text-[1.4rem] text-black/50 mb-12 max-w-[32rem] font-medium leading-relaxed italic uppercase tracking-wider">
                 Upload a .CSV of LinkedIn profiles or Emails to trigger the AI personalization layer.
               </p>
-              <button 
-                onClick={() => setIsUploading(true)}
-                className="px-12 py-5 bg-sb-accent text-white rounded-full font-bold text-[1.4rem] uppercase tracking-widest sb-button-active shadow-xl"
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="px-12 py-5 bg-sb-accent text-white rounded-full font-bold text-[1.4rem] uppercase tracking-widest sb-button-active shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Choose File (.csv)
+                {isUploading ? "Importing..." : "Choose File (.csv)"}
               </button>
             </div>
 
@@ -86,7 +159,7 @@ export default function Outreach() {
       </main>
 
       {/* Signature Floating Frap Button */}
-      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-[60]">
+      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-60">
         <Zap className="fill-white w-6 h-6" />
       </button>
     </div>

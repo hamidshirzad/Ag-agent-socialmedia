@@ -68,9 +68,8 @@ export default function Settings() {
   // Listen for OAuth Success from Popup
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Security check: validate origin if possible, but '*' is used in postMessage for simplicity in this dev environment
+      if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-        console.log(`Relay synchronized for platform: ${event.data.platform}`);
         refreshProfile();
       }
     };
@@ -288,7 +287,7 @@ export default function Settings() {
       </main>
 
       {/* Signature Floating Frap Button */}
-      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-[60]">
+      <button className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-60">
         <Zap className="fill-white w-6 h-6" />
       </button>
     </div>

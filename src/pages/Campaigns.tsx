@@ -359,7 +359,7 @@ export default function Campaigns() {
         {/* Variation Modal */}
         <AnimatePresence>
           {activeCampaignForVariation && (
-            <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-sb-house/80 backdrop-blur-md">
+            <div className="fixed inset-0 z-110 flex items-center justify-center p-6 bg-sb-house/80 backdrop-blur-md">
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -416,7 +416,7 @@ export default function Campaigns() {
         {/* Add Modal */}
         <AnimatePresence>
           {showAddModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-sb-house/80 backdrop-blur-sm">
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-sb-house/80 backdrop-blur-sm">
               <motion.div
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
