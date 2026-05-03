@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { Tooltip } from "../components/Tooltip";
+import { useToast } from "../components/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { Shield, Smartphone, Globe, CreditCard, Bell, Save, Zap, Trash2, Eye, EyeOff } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
@@ -9,6 +10,7 @@ import { cn } from "../lib/utils";
 
 export default function Settings() {
   const { profile, refreshProfile } = useAuth();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     name: profile?.name || "",
     company: profile?.company || "",
@@ -58,11 +60,11 @@ export default function Settings() {
       );
 
       if (!popup) {
-        alert("Neural bridge blocked by security filter. Please allow popups.");
+        toast.error("Neural bridge blocked by security filter. Please allow popups.");
       }
     } catch (error) {
       console.error("OAuth Bridge Error:", error);
-      alert("Failed to establish neural link.");
+      toast.error("Failed to establish neural link.");
     }
   };
 
@@ -100,7 +102,7 @@ export default function Settings() {
     try {
       await updateDoc(userRef, formData);
       await refreshProfile();
-      alert("Neural Configuration Synchronized.");
+      toast.success("Neural Configuration Synchronized.");
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${profile.id}`);
     }

@@ -45,25 +45,27 @@ function Wrap({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/onboarding" element={<ProtectedRoute requiresOnboarding><Onboarding /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
-          <Route path="/content" element={<ProtectedRoute><ContentEngine /></ProtectedRoute>} />
-          <Route path="/leads" element={<ProtectedRoute><LeadInbox /></ProtectedRoute>} />
-          <Route path="/outreach" element={<ProtectedRoute><Outreach /></ProtectedRoute>} />
-          <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-          <Route path="/scoring" element={<ProtectedRoute><ScoringRules /></ProtectedRoute>} />
-          <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-        <Analytics />
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Wrap><Landing /></Wrap>} />
+            <Route path="/onboarding" element={<ProtectedRoute requiresOnboarding><Wrap><Onboarding /></Wrap></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Wrap><Dashboard /></Wrap></ProtectedRoute>} />
+            <Route path="/campaigns" element={<ProtectedRoute><Wrap><Campaigns /></Wrap></ProtectedRoute>} />
+            <Route path="/content" element={<ProtectedRoute><Wrap><ContentEngine /></Wrap></ProtectedRoute>} />
+            <Route path="/leads" element={<ProtectedRoute><Wrap><LeadInbox /></Wrap></ProtectedRoute>} />
+            <Route path="/outreach" element={<ProtectedRoute><Wrap><Outreach /></Wrap></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><Wrap><Calendar /></Wrap></ProtectedRoute>} />
+            <Route path="/scoring" element={<ProtectedRoute><Wrap><ScoringRules /></Wrap></ProtectedRoute>} />
+            <Route path="/billing" element={<ProtectedRoute><Wrap><Billing /></Wrap></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Wrap><Settings /></Wrap></ProtectedRoute>} />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+          <Analytics />
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }
