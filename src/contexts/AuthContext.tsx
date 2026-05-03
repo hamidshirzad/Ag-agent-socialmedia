@@ -53,12 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(firebaseUser);
 
     const userRef = doc(db, "users", firebaseUser.uid);
-    let userSnap;
-    try {
-      userSnap = await getDoc(userRef);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
-    }
+    const userSnap = await getDoc(userRef);
 
     if (!userSnap.exists()) {
       const newProfile: Partial<UserProfile> = {
@@ -69,11 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         onboardingComplete: false,
         createdAt: new Date().toISOString(),
       };
-      try {
-        await setDoc(userRef, newProfile);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.CREATE, `users/${firebaseUser.uid}`);
-      }
+      await setDoc(userRef, newProfile);
       setProfile({ id: firebaseUser.uid, ...newProfile } as UserProfile);
       return { isNewUser: true };
     }

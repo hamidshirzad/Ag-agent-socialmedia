@@ -1,25 +1,35 @@
+import { useState } from "react";
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Send } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { Meta } from "../components/Meta";
+import { useToast } from "../components/Toast";
 
 export default function Landing() {
   const { signIn, user, profile, loading } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
+  const [signingIn, setSigningIn] = useState(false);
 
   const handleStart = async () => {
-    if (loading) return;
+    if (loading || signingIn) return;
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
-    } else {
-      try {
-        const { isNewUser } = await signIn();
-        navigate(isNewUser ? "/onboarding" : "/dashboard");
-      } catch {
-        // popup cancelled or sign-in failed — stay on Landing
+      return;
+    }
+    setSigningIn(true);
+    try {
+      const { isNewUser } = await signIn();
+      navigate(isNewUser ? "/onboarding" : "/dashboard");
+    } catch (err: any) {
+      const code: string = err?.code ?? "";
+      if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
+        toast.error(err?.message ?? "Sign-in failed. Please try again.");
       }
+    } finally {
+      setSigningIn(false);
     }
   };
 
@@ -43,15 +53,17 @@ export default function Landing() {
         <div className="flex items-center gap-6">
           <button
             onClick={handleStart}
-            className="px-6 py-2 border border-black rounded-full text-[1.4rem] font-bold sb-button-active"
+            disabled={signingIn}
+            className="px-6 py-2 border border-black rounded-full text-[1.4rem] font-bold sb-button-active disabled:opacity-50"
           >
-            Sign in
+            {signingIn ? "Signing in…" : "Sign in"}
           </button>
           <button
             onClick={handleStart}
-            className="px-6 py-2 bg-black text-white rounded-full text-[1.4rem] font-bold sb-button-active"
+            disabled={signingIn}
+            className="px-6 py-2 bg-black text-white rounded-full text-[1.4rem] font-bold sb-button-active disabled:opacity-50"
           >
-            Join now
+            {signingIn ? "Signing in…" : "Join now"}
           </button>
         </div>
       </nav>
