@@ -30,7 +30,7 @@ export default defineConfig(() => {
             ai: ['@google/genai', 'openai', '@anthropic-ai/sdk'],
           },
         },
-        external: (id) => id === 'firebase',
+        external: (id) => id === 'firebase' || id.startsWith('@neondatabase/'),
       },
     },
     server: {
