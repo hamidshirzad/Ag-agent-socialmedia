@@ -1,7 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
+    
     // 0. Default Deny
     match /{document=**} {
       allow read, write: if false;
@@ -36,17 +36,16 @@ service cloud.firestore {
     // --- Users ---
     match /users/{userId} {
       allow get: if isOwner(userId);
-
       allow create: if isOwner(userId) && isValidUser(incoming());
-
       allow update: if isOwner(userId) && isValidUser(incoming()) && (
-        incoming().email == existing().email &&
+        // Action: Profile Update during onboarding or settings
+        (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'company', 'niche', 'goals', 'onboardingComplete', 'socialAccounts', 'apiKeys', 'avatarUrl'])) ||
+        // Action: Plan Sync
+        (incoming().diff(existing()).affectedKeys().hasOnly(['plan', 'subscriptionStatus', 'paypalSubscriptionId']))
+      ) && (
+        incoming().email == existing().email && 
         incoming().createdAt == existing().createdAt
-      ) && incoming().diff(existing()).affectedKeys().hasOnly([
-        'name', 'company', 'niche', 'goals', 'industry', 'onboardingComplete',
-        'subscriptionStatus', 'paypalSubscriptionId',
-        'apiKeys', 'socialAccounts'
-      ]);
+      );
 
       function isValidUser(data) {
         return data.email is string && data.email.size() <= 100
@@ -77,16 +76,14 @@ service cloud.firestore {
     match /posts/{postId} {
       allow get: if isSignedIn() && isValidId(postId) && isOwner(existing().userId);
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-
+      
       allow create: if isOwner(incoming().userId) && isValidPost(incoming());
-
-      allow update: if isOwner(existing().userId) && isOwner(incoming().userId)
+      
+      allow update: if isOwner(existing().userId) && isOwner(incoming().userId) 
                     && isValidPost(incoming())
                     && incoming().createdAt == existing().createdAt
-                    && incoming().diff(existing()).affectedKeys().hasOnly([
-                      'caption', 'platforms', 'scheduledAt', 'status', 'autoReply', 'agentEngagement'
-                    ]);
-
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'platforms', 'scheduledAt', 'status', 'autoReply', 'agentEngagement', 'metrics', 'mediaUrl', 'campaignId', 'variationId', 'type']);
+      
       allow delete: if isOwner(existing().userId);
 
       function isValidPost(data) {
@@ -101,10 +98,10 @@ service cloud.firestore {
     match /leads/{leadId} {
       allow get: if isSignedIn() && isValidId(leadId) && isOwner(existing().userId);
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-
-      allow create: if isOwner(incoming().userId) && isValidLead(incoming());
-
-      allow update: if isOwner(existing().userId) && isOwner(incoming().userId)
+      
+      allow create: if isOwner(incoming().userId) && isValidLead(incoming()) && incoming().keys().size() == 7;
+      
+      allow update: if isOwner(existing().userId) && isOwner(incoming().userId) 
                     && isValidLead(incoming())
                     && incoming().createdAt == existing().createdAt
                     && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'status', 'score']);
@@ -119,12 +116,11 @@ service cloud.firestore {
 
       // Sub-collection: Messages
       match /messages/{messageId} {
-        allow read: if isSignedIn() && isValidId(messageId)
-                    && isOwner(get(/databases/$(database)/documents/leads/$(leadId)).data.userId);
-        allow create: if isSignedIn() && isValidId(messageId)
+        allow read: if isSignedIn() && isValidId(messageId) && isOwner(get(/databases/$(database)/documents/leads/$(leadId)).data.userId);
+        allow create: if isSignedIn() && isValidId(messageId) 
                       && isOwner(get(/databases/$(database)/documents/leads/$(leadId)).data.userId)
                       && isValidMessage(incoming());
-
+        
         function isValidMessage(data) {
           return data.content is string && data.content.size() <= 5000
               && data.sender in ['ai', 'user'];
@@ -136,7 +132,7 @@ service cloud.firestore {
     match /campaigns/{campaignId} {
       allow get: if isSignedIn() && isValidId(campaignId) && isOwner(existing().userId);
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-
+      
       allow create: if isOwner(incoming().userId) && isValidCampaign(incoming());
       allow update: if isOwner(existing().userId) && isOwner(incoming().userId) && isValidCampaign(incoming());
 

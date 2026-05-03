@@ -14,7 +14,21 @@
         "subscriptionStatus": { "type": "string" },
         "paypalSubscriptionId": { "type": "string" },
         "onboardingComplete": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "socialAccounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "platform": { "type": "string", "enum": ["linkedin", "x", "meta", "tiktok"] },
+              "accessToken": { "type": "string" },
+              "username": { "type": "string" },
+              "avatarUrl": { "type": "string" },
+              "autoReply": { "type": "boolean" },
+              "agentEngagement": { "type": "boolean" }
+            }
+          }
+        }
       },
       "required": ["email", "plan"]
     },
@@ -32,6 +46,16 @@
         "mediaUrl": { "type": "string" },
         "scheduledAt": { "type": "string", "format": "date-time" },
         "status": { "type": "string", "enum": ["draft", "scheduled", "posted"] },
+        "autoReply": { "type": "boolean" },
+        "agentEngagement": { "type": "boolean" },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "views": { "type": "integer" },
+            "clicks": { "type": "integer" },
+            "engagements": { "type": "integer" }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },

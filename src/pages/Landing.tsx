@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
-import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Send } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Send, Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { Meta } from "../components/Meta";
 import { useToast } from "../components/Toast";
@@ -17,19 +17,9 @@ export default function Landing() {
     if (loading || signingIn) return;
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
-      return;
-    }
-    setSigningIn(true);
-    try {
+    } else {
       const { isNewUser } = await signIn();
       navigate(isNewUser ? "/onboarding" : "/dashboard");
-    } catch (err: any) {
-      const code: string = err?.code ?? "";
-      if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
-        toast.error(err?.message ?? "Sign-in failed. Please try again.");
-      }
-    } finally {
-      setSigningIn(false);
     }
   };
 
@@ -187,6 +177,20 @@ export default function Landing() {
             <p className="max-w-sm text-white/60 text-[1.4rem] leading-relaxed">
               Autonomous marketing for the next generation of builders. Scale your impact without scaling your team.
             </p>
+            <div className="flex gap-6 mt-10">
+              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
+                <Twitter size={18} className="text-white/40 group-hover:text-white transition-colors" />
+              </a>
+              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
+                <Instagram size={18} className="text-white/40 group-hover:text-white transition-colors" />
+              </a>
+              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
+                <Linkedin size={18} className="text-white/40 group-hover:text-white transition-colors" />
+              </a>
+              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
+                <Youtube size={18} className="text-white/40 group-hover:text-white transition-colors" />
+              </a>
+            </div>
           </div>
           <div>
             <h4 className="font-bold text-[1.6rem] mb-12 uppercase tracking-loose">Platform</h4>

@@ -1,22 +1,10 @@
-import { useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Share2, Eye, Edit3, Plus, Zap } from "lucide-react";
 import { cn } from "../lib/utils";
 
 export default function Calendar() {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 4, 1));
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const monthLabel = currentDate.toLocaleString("en-US", { month: "long", year: "numeric" });
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOffset = (new Date(year, month, 1).getDay() + 6) % 7;
-
-  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
-  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
-
+  
   // Mock calendar items
   const schedule = [
     { day: 12, items: [{ type: "LinkedIn", title: "Scale Case Study", time: "09:00" }] },
@@ -34,13 +22,13 @@ export default function Calendar() {
             <p className="text-[1.6rem] text-black/50 font-medium">Multi-Platform Distribution Schedule</p>
           </div>
           <div className="flex gap-4">
-            <button onClick={prevMonth} className="w-14 h-14 bg-white flex items-center justify-center rounded-full sb-shadow-nav sb-button-active border border-black/5">
+            <button className="w-14 h-14 bg-white flex items-center justify-center rounded-full sb-shadow-nav sb-button-active border border-black/5">
               <ChevronLeft size={20} className="text-sb-green" />
             </button>
             <div className="px-10 py-4 bg-white sb-shadow-nav rounded-full font-bold text-[1.4rem] uppercase tracking-widest text-sb-green border border-black/5">
-              {monthLabel}
+              May 2026
             </div>
-            <button onClick={nextMonth} className="w-14 h-14 bg-white flex items-center justify-center rounded-full sb-shadow-nav sb-button-active border border-black/5">
+            <button className="w-14 h-14 bg-white flex items-center justify-center rounded-full sb-shadow-nav sb-button-active border border-black/5">
               <ChevronRight size={20} className="text-sb-green" />
             </button>
           </div>
@@ -56,16 +44,16 @@ export default function Calendar() {
           </div>
           
           <div className="grid grid-cols-7">
-            {Array.from({ length: 42 }).map((_, i) => {
-              const dayNum = i - firstDayOffset + 1;
+            {Array.from({ length: 35 }).map((_, i) => {
+              const dayNum = i - 3 + 1; // Simple offset for may 2026
               const dayData = schedule.find(s => s.day === dayNum);
-
+              
               return (
                 <div key={i} className={cn(
                   "min-h-[16rem] p-6 border-r border-b border-black/5 transition-all relative overflow-hidden",
-                  dayNum < 1 || dayNum > daysInMonth ? "bg-sb-cream/20" : "hover:bg-sb-cream/40 cursor-pointer"
+                  dayNum < 1 || dayNum > 31 ? "bg-sb-cream/20" : "hover:bg-sb-cream/40 cursor-pointer"
                 )}>
-                  {dayNum >= 1 && dayNum <= daysInMonth && (
+                  {dayNum > 0 && dayNum <= 31 && (
                     <>
                       <div className="flex justify-between items-start mb-6">
                         <span className="text-[1.8rem] font-bold tracking-tight text-sb-green/40">{dayNum}</span>

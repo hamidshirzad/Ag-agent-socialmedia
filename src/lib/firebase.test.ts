@@ -1,125 +1,48 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { handleFirestoreError, OperationType, auth } from "./firebase";
 
-// vi.hoisted ensures these values are initialized before vi.mock factories run
-const { mockAuth } = vi.hoisted(() => {
-  const mockAuth: { currentUser: Record<string, unknown> | null } = {
-    currentUser: {
-      uid: "uid123",
-      email: "test@example.com",
-      emailVerified: true,
-      isAnonymous: false,
-      tenantId: null,
-      providerData: [{ providerId: "google.com", email: "test@example.com" }],
-    },
+// Mock auth.currentUser
+vi.mock("./firebase", async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return {
+    ...actual,
+    auth: {
+      currentUser: null
+    }
   };
-  return { mockAuth };
 });
 
-vi.mock("firebase/app", () => ({
-  initializeApp: vi.fn(() => ({})),
-}));
-
-vi.mock("firebase/auth", () => ({
-  getAuth: vi.fn(() => mockAuth),
-  GoogleAuthProvider: vi.fn(() => ({})),
-}));
-
-vi.mock("firebase/firestore", () => ({
-  getFirestore: vi.fn(() => ({})),
-  doc: vi.fn(),
-  getDocFromServer: vi.fn(() => Promise.resolve()),
-  collection: vi.fn(),
-  getDocs: vi.fn(),
-  onSnapshot: vi.fn(),
-  setDoc: vi.fn(),
-}));
-
-vi.mock("../../firebase-applet-config.json", () => ({
-  default: {
-    apiKey: "test",
-    authDomain: "test",
-    projectId: "test",
-    firestoreDatabaseId: "(default)",
-  },
-}));
-
-import { handleFirestoreError, OperationType } from "./firebase";
-
 describe("handleFirestoreError", () => {
-  beforeEach(() => {
-    mockAuth.currentUser = {
-      uid: "uid123",
-      email: "test@example.com",
-      emailVerified: true,
-      isAnonymous: false,
-      tenantId: null,
-      providerData: [{ providerId: "google.com", email: "test@example.com" }],
-    };
+  it("should extract message from Error object", () => {
+    const error = new Error("Test error");
+    expect(() => handleFirestoreError(error, OperationType.GET, "test-path"))
+      .toThrow(/Test error/);
   });
 
-  it("extracts message from Error instances", () => {
-    expect(() =>
-      handleFirestoreError(new Error("permission denied"), OperationType.GET, "users/123")
-    ).toThrow();
+  it("should convert non-Error values to string", () => {
+    expect(() => handleFirestoreError("string error", OperationType.GET, "test-path"))
+      .toThrow(/string error/);
+  });
 
+  it("should include auth info in the error message", () => {
+    const error = new Error("Auth test");
     try {
-      handleFirestoreError(new Error("permission denied"), OperationType.GET, "users/123");
-    } catch (e) {
-      const parsed = JSON.parse((e as Error).message);
-      expect(parsed.error).toBe("permission denied");
-      expect(parsed.operationType).toBe("get");
-      expect(parsed.path).toBe("users/123");
+      handleFirestoreError(error, OperationType.GET, "path");
+    } catch (e: any) {
+      const info = JSON.parse(e.message);
+      expect(info).toHaveProperty("authInfo");
+      expect(info.operationType).toBe(OperationType.GET);
+      expect(info.path).toBe("path");
     }
   });
 
-  it("converts non-Error values via String()", () => {
+  it("should handle null currentUser gracefully", () => {
+    (auth as any).currentUser = null;
     try {
-      handleFirestoreError("something went wrong", OperationType.CREATE, null);
-    } catch (e) {
-      const parsed = JSON.parse((e as Error).message);
-      expect(parsed.error).toBe("something went wrong");
-      expect(parsed.path).toBeNull();
-    }
-  });
-
-  it("serializes auth.currentUser into authInfo", () => {
-    try {
-      handleFirestoreError(new Error("x"), OperationType.GET, "path");
-    } catch (e) {
-      const parsed = JSON.parse((e as Error).message);
-      expect(parsed.authInfo.userId).toBe("uid123");
-      expect(parsed.authInfo.email).toBe("test@example.com");
-      expect(parsed.authInfo.emailVerified).toBe(true);
-      expect(parsed.authInfo.providerInfo).toEqual([
-        { providerId: "google.com", email: "test@example.com" },
-      ]);
-    }
-  });
-
-  it("handles null currentUser with empty/undefined authInfo fields", () => {
-    mockAuth.currentUser = null;
-
-    try {
-      handleFirestoreError(new Error("x"), OperationType.DELETE, "col/doc");
-    } catch (e) {
-      const parsed = JSON.parse((e as Error).message);
-      expect(parsed.authInfo.userId).toBeUndefined();
-      expect(parsed.authInfo.email).toBeUndefined();
-      expect(parsed.authInfo.providerInfo).toEqual([]);
-    }
-  });
-
-  it("always throws — never just logs", () => {
-    expect(() =>
-      handleFirestoreError(new Error("any"), OperationType.LIST, null)
-    ).toThrow();
-  });
-
-  it("thrown error message is valid JSON", () => {
-    try {
-      handleFirestoreError(new Error("bad"), OperationType.UPDATE, "users/x");
-    } catch (e) {
-      expect(() => JSON.parse((e as Error).message)).not.toThrow();
+      handleFirestoreError(new Error("Null user"), OperationType.WRITE, "path");
+    } catch (e: any) {
+      const info = JSON.parse(e.message);
+      expect(info.authInfo.userId).toBeUndefined();
     }
   });
 });

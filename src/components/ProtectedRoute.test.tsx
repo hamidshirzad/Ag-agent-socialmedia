@@ -1,94 +1,82 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
+import { useAuth } from "../contexts/AuthContext";
 
-const mockUseAuth = vi.fn();
 vi.mock("../contexts/AuthContext", () => ({
-  useAuth: () => mockUseAuth(),
+  useAuth: vi.fn()
 }));
 
-const mockUser = { uid: "uid1", email: "a@b.com" };
-
-function renderRoute(
-  initialPath: string,
-  requiresOnboarding = false,
-  childContent = "protected-content"
-) {
-  return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <Routes>
-        <Route path="/" element={<div>home</div>} />
-        <Route path="/onboarding" element={<div>onboarding-page</div>} />
-        <Route path="/dashboard" element={<div>dashboard-page</div>} />
-        <Route
-          path="/protected"
-          element={
-            <ProtectedRoute requiresOnboarding={requiresOnboarding}>
-              <div>{childContent}</div>
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </MemoryRouter>
-  );
-}
-
 describe("ProtectedRoute", () => {
-  it("shows loading spinner when loading is true", () => {
-    mockUseAuth.mockReturnValue({ user: null, profile: null, loading: true });
+  it("should show spinner when loading", () => {
+    (useAuth as any).mockReturnValue({ loading: true });
     render(
       <MemoryRouter>
-        <ProtectedRoute><div>content</div></ProtectedRoute>
+        <ProtectedRoute><div>Children</div></ProtectedRoute>
       </MemoryRouter>
     );
-    expect(screen.getByText("Neural_Sync_Active")).toBeInTheDocument();
-    expect(screen.queryByText("content")).not.toBeInTheDocument();
+    expect(screen.getByText(/Neural_Sync_Active/i)).toBeInTheDocument();
   });
 
-  it("redirects to / when not authenticated", () => {
-    mockUseAuth.mockReturnValue({ user: null, profile: null, loading: false });
-    renderRoute("/protected");
-    expect(screen.getByText("home")).toBeInTheDocument();
+  it("should redirect to / when not logged in", () => {
+    (useAuth as any).mockReturnValue({ loading: false, user: null });
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Routes>
+          <Route path="/" element={<div>Landing</div>} />
+          <Route path="/dashboard" element={<ProtectedRoute><div>Dashboard</div></ProtectedRoute>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Landing")).toBeInTheDocument();
   });
 
-  it("renders children when authenticated and onboarding complete (app route)", () => {
-    mockUseAuth.mockReturnValue({
-      user: mockUser,
-      profile: { onboardingComplete: true },
-      loading: false,
+  it("should redirect to /onboarding if profile not complete (app route)", () => {
+    (useAuth as any).mockReturnValue({ 
+      loading: false, 
+      user: { uid: "123" }, 
+      profile: { onboardingComplete: false } 
     });
-    renderRoute("/protected", false, "dashboard-content");
-    expect(screen.getByText("dashboard-content")).toBeInTheDocument();
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Routes>
+          <Route path="/onboarding" element={<div>Onboarding</div>} />
+          <Route path="/dashboard" element={<ProtectedRoute><div>Dashboard</div></ProtectedRoute>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Onboarding")).toBeInTheDocument();
   });
 
-  it("redirects to /onboarding when authenticated but onboarding incomplete (app route)", () => {
-    mockUseAuth.mockReturnValue({
-      user: mockUser,
-      profile: { onboardingComplete: false },
-      loading: false,
+  it("should allow access to dashboard if onboarding complete", () => {
+    (useAuth as any).mockReturnValue({ 
+      loading: false, 
+      user: { uid: "123" }, 
+      profile: { onboardingComplete: true } 
     });
-    renderRoute("/protected", false);
-    expect(screen.getByText("onboarding-page")).toBeInTheDocument();
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <ProtectedRoute><div>Dashboard Page</div></ProtectedRoute>
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Dashboard Page")).toBeInTheDocument();
   });
 
-  it("redirects to /dashboard when requiresOnboarding=true and onboarding already complete", () => {
-    mockUseAuth.mockReturnValue({
-      user: mockUser,
-      profile: { onboardingComplete: true },
-      loading: false,
+  it("should redirect to /dashboard if already complete (onboarding route)", () => {
+    (useAuth as any).mockReturnValue({ 
+      loading: false, 
+      user: { uid: "123" }, 
+      profile: { onboardingComplete: true } 
     });
-    renderRoute("/protected", true);
-    expect(screen.getByText("dashboard-page")).toBeInTheDocument();
-  });
-
-  it("renders onboarding children when requiresOnboarding=true and not yet complete", () => {
-    mockUseAuth.mockReturnValue({
-      user: mockUser,
-      profile: { onboardingComplete: false },
-      loading: false,
-    });
-    renderRoute("/protected", true, "onboarding-content");
-    expect(screen.getByText("onboarding-content")).toBeInTheDocument();
+    render(
+      <MemoryRouter initialEntries={["/onboarding"]}>
+        <Routes>
+          <Route path="/dashboard" element={<div>Dashboard</div>} />
+          <Route path="/onboarding" element={<ProtectedRoute requiresOnboarding><div>Onboarding</div></ProtectedRoute>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
   });
 });

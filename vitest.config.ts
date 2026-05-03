@@ -5,14 +5,8 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { 
-      "@": path.resolve(__dirname, "."),
-      "@/components": path.resolve(__dirname, "./src/components"),
-      "@/contexts": path.resolve(__dirname, "./src/contexts"),
-      "@/services": path.resolve(__dirname, "./src/services"),
-      "@/lib": path.resolve(__dirname, "./src/lib"),
-      "@/types": path.resolve(__dirname, "./src/types"),
-      "@/test": path.resolve(__dirname, "./src/test")
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
     },
   },
   test: {

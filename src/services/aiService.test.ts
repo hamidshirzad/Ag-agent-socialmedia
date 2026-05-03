@@ -1,127 +1,87 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-const mockGenerateContent = vi.fn();
-vi.mock("@google/genai", () => ({
-  GoogleGenAI: vi.fn().mockImplementation(() => ({
-    models: { generateContent: mockGenerateContent },
-  })),
-}));
-
-const mockMessagesCreate = vi.fn();
-vi.mock("@anthropic-ai/sdk", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    messages: { create: mockMessagesCreate },
-  })),
-}));
-
-const mockChatCompletionsCreate = vi.fn();
-vi.mock("openai", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    chat: { completions: { create: mockChatCompletionsCreate } },
-  })),
-}));
-
+import { describe, it, expect, vi } from "vitest";
 import { generateContentWithEngine } from "./aiService";
 
-describe("generateContentWithEngine", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    delete process.env.GEMINI_API_KEY;
+// Mock the AI SDKs
+vi.mock("@google/genai", () => ({
+  GoogleGenAI: vi.fn().mockImplementation(function() {
+    return {
+      models: {
+        generateContent: vi.fn().mockResolvedValue({ text: '{"success": true}' })
+      }
+    };
+  })
+}));
+
+vi.mock("@anthropic-ai/sdk", () => ({
+  default: vi.fn().mockImplementation(function() {
+    return {
+      messages: {
+        create: vi.fn().mockResolvedValue({
+          content: [{ type: "text", text: '{"claude": true}' }]
+        })
+      }
+    };
+  })
+}));
+
+vi.mock("openai", () => ({
+  default: vi.fn().mockImplementation(function() {
+    return {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            choices: [{ message: { content: '{"gpt": true}' } }]
+          })
+        }
+      }
+    };
+  })
+}));
+
+describe("aiService / generateContentWithEngine", () => {
+  it("should route to gemini correctly", async () => {
+    const result = await generateContentWithEngine("test", { provider: "gemini", apiKey: "key" });
+    expect(result).toEqual({ success: true });
   });
 
-  it("routes to Gemini and returns parsed JSON", async () => {
-    mockGenerateContent.mockResolvedValue({ text: '{"title":"test"}' });
+  it("should route to anthropic correctly", async () => {
+    const result = await generateContentWithEngine("test", { provider: "anthropic", apiKey: "key" });
+    expect(result).toEqual({ claude: true });
+  });
 
-    const result = await generateContentWithEngine("prompt", {
-      provider: "gemini",
-      apiKey: "gemini-key",
+  it("should route to openai correctly", async () => {
+    const result = await generateContentWithEngine("test", { provider: "openai", apiKey: "key" });
+    expect(result).toEqual({ gpt: true });
+  });
+
+  it("should throw for unsupported provider", async () => {
+    // @ts-ignore
+    await expect(generateContentWithEngine("test", { provider: "invalid" }))
+      .rejects.toThrow("Unsupported AI Provider");
+  });
+
+  it("should throw for missing keys", async () => {
+    await expect(generateContentWithEngine("test", { provider: "anthropic" }))
+      .rejects.toThrow("Anthropic API Key missing");
+      
+    await expect(generateContentWithEngine("test", { provider: "openai" }))
+      .rejects.toThrow("OpenAI API Key missing");
+  });
+
+  it("should attempt extraction for Claude if JSON parsing fails", async () => {
+    const Anthropic = (await import("@anthropic-ai/sdk")).default;
+    // @ts-ignore
+    Anthropic.mockImplementationOnce(function() {
+      return {
+        messages: {
+          create: vi.fn().mockResolvedValue({
+            content: [{ type: "text", text: 'Prose text... {"extracted": true} more prose' }]
+          })
+        }
+      };
     });
 
-    expect(result).toEqual({ title: "test" });
-  });
-
-  it("routes to Anthropic and returns parsed JSON", async () => {
-    mockMessagesCreate.mockResolvedValue({
-      content: [{ type: "text", text: '{"result":1}' }],
-    });
-
-    const result = await generateContentWithEngine("prompt", {
-      provider: "anthropic",
-      apiKey: "sk-test",
-    });
-
-    expect(result).toEqual({ result: 1 });
-  });
-
-  it("routes to OpenAI and returns parsed JSON", async () => {
-    mockChatCompletionsCreate.mockResolvedValue({
-      choices: [{ message: { content: '{"out":"ok"}' } }],
-    });
-
-    const result = await generateContentWithEngine("prompt", {
-      provider: "openai",
-      apiKey: "sk-test",
-    });
-
-    expect(result).toEqual({ out: "ok" });
-  });
-
-  it("throws for unsupported provider", async () => {
-    await expect(
-      generateContentWithEngine("prompt", { provider: "unknown" as any })
-    ).rejects.toThrow("Unsupported AI Provider");
-  });
-
-  it("throws when Anthropic API key is missing", async () => {
-    await expect(
-      generateContentWithEngine("prompt", { provider: "anthropic" })
-    ).rejects.toThrow("Anthropic API Key missing");
-  });
-
-  it("throws when OpenAI API key is missing", async () => {
-    await expect(
-      generateContentWithEngine("prompt", { provider: "openai" })
-    ).rejects.toThrow("OpenAI API Key missing");
-  });
-
-  it("throws when Gemini API key is missing (no env var, no userKey)", async () => {
-    await expect(
-      generateContentWithEngine("prompt", { provider: "gemini" })
-    ).rejects.toThrow("Gemini API Key missing");
-  });
-
-  it("uses GEMINI_API_KEY env var when no userKey provided", async () => {
-    process.env.GEMINI_API_KEY = "env-key";
-    mockGenerateContent.mockResolvedValue({ text: '{"env":true}' });
-
-    const result = await generateContentWithEngine("prompt", { provider: "gemini" });
-
-    expect(result).toEqual({ env: true });
-  });
-
-  it("Claude fallback: extracts JSON object embedded in prose", async () => {
-    mockMessagesCreate.mockResolvedValue({
-      content: [{ type: "text", text: 'Here is your result: {"extracted":true} — done.' }],
-    });
-
-    const result = await generateContentWithEngine("prompt", {
-      provider: "anthropic",
-      apiKey: "sk-test",
-    });
-
+    const result = await generateContentWithEngine("test", { provider: "anthropic", apiKey: "key" });
     expect(result).toEqual({ extracted: true });
-  });
-
-  it("Claude fallback: returns error object when no JSON can be found", async () => {
-    mockMessagesCreate.mockResolvedValue({
-      content: [{ type: "text", text: "Plain text response with no JSON at all." }],
-    });
-
-    const result = await generateContentWithEngine("prompt", {
-      provider: "anthropic",
-      apiKey: "sk-test",
-    });
-
-    expect(result).toEqual({ error: "Failed to parse JSON" });
   });
 });

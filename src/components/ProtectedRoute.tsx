@@ -2,10 +2,10 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
-export default function ProtectedRoute({
-  children,
-  requiresOnboarding = false,
-}: {
+export default function ProtectedRoute({ 
+  children, 
+  requiresOnboarding = false 
+}: { 
   children: React.ReactNode;
   requiresOnboarding?: boolean;
 }) {
@@ -25,8 +25,10 @@ export default function ProtectedRoute({
   }
 
   if (requiresOnboarding) {
+    // This is the /onboarding route — redirect away if already done
     if (profile?.onboardingComplete) return <Navigate to="/dashboard" />;
   } else {
+    // All other protected routes — redirect to onboarding if not done
     if (!profile?.onboardingComplete) return <Navigate to="/onboarding" />;
   }
 

@@ -48,29 +48,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (): Promise<{ isNewUser: boolean }> => {
-    const result = await signInWithPopup(auth, googleProvider);
-    const firebaseUser = result.user;
-    setUser(firebaseUser);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+      setUser(firebaseUser); // Update immediately to prevent race conditions
 
-    const userRef = doc(db, "users", firebaseUser.uid);
-    const userSnap = await getDoc(userRef);
-
-    if (!userSnap.exists()) {
-      const newProfile: Partial<UserProfile> = {
-        email: firebaseUser.email || "",
-        name: firebaseUser.displayName || "New User",
-        plan: 'starter',
-        subscriptionStatus: 'inactive',
-        onboardingComplete: false,
-        createdAt: new Date().toISOString(),
-      };
-      await setDoc(userRef, newProfile);
-      setProfile({ id: firebaseUser.uid, ...newProfile } as UserProfile);
-      return { isNewUser: true };
+      // Initialize profile if not exists
+      const userRef = doc(db, "users", firebaseUser.uid);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        const newProfile: Partial<UserProfile> = {
+          email: firebaseUser.email || "",
+          name: firebaseUser.displayName || "New User",
+          plan: 'starter',
+          subscriptionStatus: 'inactive',
+          onboardingComplete: false,
+          createdAt: new Date().toISOString(),
+        };
+        await setDoc(userRef, newProfile);
+        setProfile({ id: firebaseUser.uid, ...newProfile } as UserProfile);
+        return { isNewUser: true };
+      } else {
+        setProfile({ id: firebaseUser.uid, ...userSnap.data() } as UserProfile);
+        return { isNewUser: false };
+      }
+    } catch (error) {
+      console.error("Login failed", error);
+      return { isNewUser: false };
     }
-
-    setProfile({ id: firebaseUser.uid, ...userSnap.data() } as UserProfile);
-    return { isNewUser: false };
   };
 
   const logout = async () => {
