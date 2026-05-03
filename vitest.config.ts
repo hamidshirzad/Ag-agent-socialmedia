@@ -48,7 +48,6 @@ export default defineConfig({
     },
     sequence: {
       shuffle: false,
-      concurrent: true
     },
     reporters: ["default", "verbose"]
   },
