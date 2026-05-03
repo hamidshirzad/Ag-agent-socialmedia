@@ -1,16 +1,15 @@
-import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
-import {
-  BarChart3,
-  Users,
-  Zap,
-  TrendingUp,
-  Calendar,
-  Inbox,
-  Settings,
-  Send,
-  Brain,
+import { 
+  BarChart3, 
+  Users, 
+  Zap, 
+  TrendingUp, 
+  Calendar, 
+  Inbox, 
+  Settings, 
+  Send, 
+  Brain, 
   Activity,
   PieChart as PieChartIcon,
   ChevronRight
@@ -19,15 +18,13 @@ import { Sidebar } from "../components/Sidebar";
 import { StatsCard } from "../components/StatsCard";
 import { cn } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "../lib/firebase";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -54,21 +51,6 @@ const campaignData = [
 export default function Dashboard() {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const [postCount, setPostCount]           = useState(0);
-  const [scheduledCount, setScheduledCount] = useState(0);
-  const [leadCount, setLeadCount]           = useState(0);
-
-  useEffect(() => {
-    if (!profile?.id) return;
-    const postsQ = query(collection(db, "posts"), where("userId", "==", profile.id));
-    const leadsQ = query(collection(db, "leads"), where("userId", "==", profile.id));
-    const unsubPosts = onSnapshot(postsQ, snap => {
-      setPostCount(snap.size);
-      setScheduledCount(snap.docs.filter(d => d.data().status === "scheduled").length);
-    });
-    const unsubLeads = onSnapshot(leadsQ, snap => setLeadCount(snap.size));
-    return () => { unsubPosts(); unsubLeads(); };
-  }, [profile?.id]);
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
@@ -119,10 +101,10 @@ export default function Dashboard() {
         </div>
 
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-          <StatsCard label="Lead Volume" value={String(leadCount)}      trend="+12.4%" icon={Users} />
-          <StatsCard label="Engagement" value="4.8%"                    trend="+0.2%" icon={Zap} />
-          <StatsCard label="Conversion" value="1.2%"                    trend="-0.1%" icon={TrendingUp} />
-          <StatsCard label="Scheduled"  value={String(scheduledCount)}              icon={Calendar} />
+          <StatsCard label="Lead Volume" value="142" trend="+12.4%" icon={Users} />
+          <StatsCard label="Engagement" value="4.8%" trend="+0.2%" icon={Zap} />
+          <StatsCard label="Conversion" value="1.2%" trend="-0.1%" icon={TrendingUp} />
+          <StatsCard label="Scheduled" value="18" icon={Calendar} />
         </section>
 
         {/* Analytics Section */}
