@@ -1,4 +1,5 @@
 import express, { NextFunction, Request, Response } from "express";
+import { generateContentWithEngine } from "./src/services/aiService.js";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -268,6 +269,20 @@ export function createApp() {
 
     console.log(`Scheduling post ${postId} for ${platforms} at ${scheduledAt}`);
     res.json({ success: true, postId, platforms, scheduledAt });
+  });
+
+  app.post("/api/generate", async (req: Request, res: Response, next: NextFunction) => {
+    const { prompt, provider = "gemini", apiKey } = req.body as {
+      prompt?: string;
+      provider?: string;
+      apiKey?: string;
+    };
+    try {
+      const result = await generateContentWithEngine(prompt as string, { provider, apiKey });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
   });
 
   // ── TikTok OAuth ──────────────────────────────────────────────────────────

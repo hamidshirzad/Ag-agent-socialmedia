@@ -1,4 +1,5 @@
 import { Sidebar } from "../components/Sidebar";
+import { Tooltip } from "../components/Tooltip";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Share2, Eye, Edit3, Plus, Zap } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -22,15 +23,19 @@ export default function Calendar() {
             <p className="text-[1.6rem] text-black/50 font-medium">Multi-Platform Distribution Schedule</p>
           </div>
           <div className="flex gap-4">
-            <button className="w-14 h-14 bg-white flex items-center justify-center rounded-full sb-shadow-nav sb-button-active border border-black/5">
-              <ChevronLeft size={20} className="text-sb-green" />
-            </button>
+            <Tooltip content="Previous Month" placement="bottom">
+              <button aria-label="Previous month" className="w-14 h-14 bg-white flex items-center justify-center rounded-full sb-shadow-nav sb-button-active border border-black/5">
+                <ChevronLeft size={20} className="text-sb-green" />
+              </button>
+            </Tooltip>
             <div className="px-10 py-4 bg-white sb-shadow-nav rounded-full font-bold text-[1.4rem] uppercase tracking-widest text-sb-green border border-black/5">
               May 2026
             </div>
-            <button className="w-14 h-14 bg-white flex items-center justify-center rounded-full sb-shadow-nav sb-button-active border border-black/5">
-              <ChevronRight size={20} className="text-sb-green" />
-            </button>
+            <Tooltip content="Next Month" placement="bottom">
+              <button aria-label="Next month" className="w-14 h-14 bg-white flex items-center justify-center rounded-full sb-shadow-nav sb-button-active border border-black/5">
+                <ChevronRight size={20} className="text-sb-green" />
+              </button>
+            </Tooltip>
           </div>
         </header>
 
@@ -105,9 +110,11 @@ export default function Calendar() {
                             <p className="text-[1.2rem] opacity-50 font-medium italic">Ready for distribution on May 1{i}</p>
                          </div>
                       </div>
-                      <button className="w-12 h-12 flex items-center justify-center bg-sb-cream rounded-full text-sb-green opacity-0 group-hover:opacity-100 transition-all sb-button-active">
-                        <Edit3 size={18} />
-                      </button>
+                      <Tooltip content="Edit Post" placement="left">
+                        <button aria-label="Edit post" className="w-12 h-12 flex items-center justify-center bg-sb-cream rounded-full text-sb-green opacity-0 group-hover:opacity-100 transition-all sb-button-active">
+                          <Edit3 size={18} />
+                        </button>
+                      </Tooltip>
                    </div>
                  ))}
               </div>

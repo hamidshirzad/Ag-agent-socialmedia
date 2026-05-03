@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Send, Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { Meta } from "../components/Meta";
 import { useToast } from "../components/Toast";

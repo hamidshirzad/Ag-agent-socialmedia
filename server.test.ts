@@ -11,8 +11,9 @@ vi.mock("./src/services/aiService.js", () => ({
 
 import { createApp } from "./server";
 
+const app = createApp();
+
 describe("Express Server API", () => {
-  const app = createApp();
 
   it("GET /api/health should return ok and timestamp", async () => {
     const res = await request(app).get("/api/health");
@@ -35,9 +36,9 @@ describe("Express Server API", () => {
       .send({ postId: "post_1", platforms: ["linkedin"], scheduledAt: "2026-06-01" });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.postId).toBe("p1");
-    expect(res.body.platforms).toEqual(["twitter"]);
-    expect(res.body.scheduledAt).toBe("2026-05-01T12:00:00Z");
+    expect(res.body.postId).toBe("post_1");
+    expect(res.body.platforms).toEqual(["linkedin"]);
+    expect(res.body.scheduledAt).toBe("2026-06-01");
   });
 
   it("returns 400 when postId is missing", async () => {
