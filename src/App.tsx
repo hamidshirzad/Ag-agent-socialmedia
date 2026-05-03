@@ -3,21 +3,44 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import React, { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "./contexts/AuthContext";
-import Landing from "./pages/Landing";
-import Dashboard from "./pages/Dashboard";
-import Onboarding from "./pages/Onboarding";
-import ContentEngine from "./pages/ContentEngine";
-import LeadInbox from "./pages/LeadInbox";
-import Outreach from "./pages/Outreach";
-import Calendar from "./pages/Calendar";
-import Settings from "./pages/Settings";
-import ScoringRules from "./pages/ScoringRules";
-import Billing from "./pages/Billing";
-import Campaigns from "./pages/Campaigns";
+import { ToastProvider } from "./components/Toast";
+import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
+
+const Landing      = lazy(() => import("./pages/Landing"));
+const Contact      = lazy(() => import("./pages/Contact"));
+const Dashboard    = lazy(() => import("./pages/Dashboard"));
+const Onboarding   = lazy(() => import("./pages/Onboarding"));
+const ContentEngine = lazy(() => import("./pages/ContentEngine"));
+const LeadInbox    = lazy(() => import("./pages/LeadInbox"));
+const Outreach     = lazy(() => import("./pages/Outreach"));
+const Calendar     = lazy(() => import("./pages/Calendar"));
+const Settings     = lazy(() => import("./pages/Settings"));
+const ScoringRules = lazy(() => import("./pages/ScoringRules"));
+const Billing      = lazy(() => import("./pages/Billing"));
+const Campaigns    = lazy(() => import("./pages/Campaigns"));
+
+function PageLoader() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-sb-cream">
+      <div className="w-12 h-12 rounded-full border-4 border-sb-accent border-t-transparent animate-spin" />
+    </div>
+  );
+}
+
+function Wrap({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        {children}
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
 
 export default function App() {
   return (
@@ -44,6 +67,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
-
-
