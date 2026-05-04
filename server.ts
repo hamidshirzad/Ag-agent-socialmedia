@@ -26,6 +26,20 @@ if (!admin.apps.length) {
 const dbId = firebaseConfig.firestoreDatabaseId;
 const targetDb = getFirestore(dbId || "(default)");
 
+// ── TikTok OAuth helpers ──────────────────────────────────────────────────────
+const TIKTOK_TOKEN_URL  = "https://open.tiktokapis.com/v2/oauth/token/";
+const TIKTOK_REVOKE_URL = "https://open.tiktokapis.com/v2/oauth/revoke/";
+
+const pendingOAuthResults = new Map<string, { data: Record<string, unknown>; createdAt: number }>();
+
+async function tiktokPost(url: string, body: Record<string, string>): Promise<Record<string, string>> {
+  const params = new URLSearchParams(body);
+  const response = await axios.post<Record<string, string>>(url, params.toString(), {
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  });
+  return response.data;
+}
+
 export function createApp() {
   const app = express();
   app.use(express.json());
@@ -278,7 +292,7 @@ export function createApp() {
       apiKey?: string;
     };
     try {
-      const result = await generateContentWithEngine(prompt as string, { provider, apiKey });
+      const result = await generateContentWithEngine(prompt as string, { provider: provider as "gemini" | "anthropic" | "openai", apiKey });
       res.json(result);
     } catch (err) {
       next(err);
