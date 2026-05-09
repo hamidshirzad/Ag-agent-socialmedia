@@ -27,10 +27,9 @@ async function callGemini(prompt: string, userKey?: string) {
   const apiKey = userKey || process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("Gemini API Key missing");
   
-  const genAI = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey });
   
-  // Using the pattern from the existing working code in this project
-  const result = await (genAI as any).models.generateContent({
+  const response = await (ai as any).models.generateContent({
     model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
@@ -38,7 +37,7 @@ async function callGemini(prompt: string, userKey?: string) {
     }
   });
   
-  return JSON.parse(result.text || "{}");
+  return JSON.parse(response.text || "{}");
 }
 
 async function callClaude(prompt: string, userKey?: string) {

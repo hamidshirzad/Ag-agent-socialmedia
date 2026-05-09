@@ -217,16 +217,34 @@ export function createApp() {
     console.log(`[PayPal Webhook] ${eventType} received:`, event.id);
 
     try {
+      // Log all events to Firestore for audit trail
+      await db.collection("billing_events").add({
+        id: event.id,
+        type: eventType,
+        resourceId: resource.id,
+        receivedAt: new Date(),
+        data: resource
+      });
+
       switch (eventType) {
         case "PAYMENT.AUTHORIZATION.CREATED":
           console.log(`Authorization created for amount ${resource.amount.total} ${resource.amount.currency}`);
-          // Logic to capture payment or update order status in Firestore would go here
-          // We'd typically use a field like 'custom_id' from the request to find the user
+          // Potential logic: Trigger manual review or notification for high-value orders
           break;
-          
+        
         case "BILLING.SUBSCRIPTION.ACTIVATED":
           console.log(`Subscription ${resource.id} activated.`);
-          // Update user status to 'PRO' or similar
+          // Check for 'custom_id' or 'subscriber.email' to find user
+          if (resource.subscriber?.email_address) {
+             const userQuery = await db.collection("users").where("email", "==", resource.subscriber.email_address).get();
+             if (!userQuery.empty) {
+               await userQuery.docs[0].ref.update({ 
+                 plan: "pro", 
+                 subscriptionId: resource.id,
+                 updatedAt: new Date()
+               });
+             }
+          }
           break;
 
         case "PAYMENT.SALE.COMPLETED":

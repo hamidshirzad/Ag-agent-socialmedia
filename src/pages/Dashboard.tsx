@@ -126,8 +126,8 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <div className="h-[300px] w-full min-h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={performanceData}>
                   <defs>
                     <linearGradient id="colorEngage" x1="0" y1="0" x2="0" y2="1">
@@ -175,8 +175,8 @@ export default function Dashboard() {
 
           <div className="bg-white p-10 rounded-[12px] sb-shadow-card">
              <h3 className="text-sb-green font-bold text-[1.6rem] uppercase tracking-widest leading-none mb-10 pb-4 border-b border-black/5">Cluster Distro</h3>
-             <div className="h-[240px] relative">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+             <div className="h-[240px] w-full relative min-h-[240px]">
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={campaignData}
