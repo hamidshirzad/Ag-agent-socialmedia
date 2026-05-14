@@ -1,3 +1,4 @@
+import './src/lib/datadog.js'; // must be first — initialises dd-trace + LLMObs
 import express, { NextFunction, Request, Response } from "express";
 import { generateContentWithEngine } from "./src/services/aiService.js";
 import { createServer as createViteServer } from "vite";
