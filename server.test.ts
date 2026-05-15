@@ -5,8 +5,9 @@ import { describe, it, expect, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "./server";
 
+const app = createApp();
+
 describe("Express Server API", () => {
-  const app = createApp();
 
   it("GET /api/health should return ok and timestamp", async () => {
     const res = await request(app).get("/api/health");
