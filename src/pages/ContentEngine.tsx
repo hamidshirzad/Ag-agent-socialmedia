@@ -185,7 +185,7 @@ export default function ContentEngine() {
 
   const handleGenerateVideo = async () => {
     if (!(window as any).aistudio) {
-      toast.error("Neural API Bridge not found.");
+      alert("Neural API Bridge not found.");
       return;
     }
 
@@ -211,9 +211,9 @@ export default function ContentEngine() {
       console.error(err);
       if (err.message === "KEY_NOT_FOUND") {
         await (window as any).aistudio.openSelectKey();
-        toast.error("Session expired. Neural key reset. Please try generating again.");
+        alert("Session expired. Neural key reset. Please try generating again.");
       } else {
-        toast.error(err.message || "Video synthesis failed.");
+        alert(err.message || "Video synthesis failed.");
       }
     } finally {
       setIsVideoGenerating(false);

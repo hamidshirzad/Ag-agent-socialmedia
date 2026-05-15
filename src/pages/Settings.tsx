@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
-import { Tooltip } from "../components/Tooltip";
-import { useToast } from "../components/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { Shield, Smartphone, Globe, CreditCard, Bell, Save, Zap, Trash2, Eye, EyeOff } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
@@ -10,7 +8,6 @@ import { cn } from "../lib/utils";
 
 export default function Settings() {
   const { profile, refreshProfile } = useAuth();
-  const toast = useToast();
   const [formData, setFormData] = useState({
     name: profile?.name || "",
     company: profile?.company || "",
@@ -60,11 +57,11 @@ export default function Settings() {
       );
 
       if (!popup) {
-        toast.error("Neural bridge blocked by security filter. Please allow popups.");
+        alert("Neural bridge blocked by security filter. Please allow popups.");
       }
     } catch (error) {
       console.error("OAuth Bridge Error:", error);
-      toast.error("Failed to establish neural link.");
+      alert("Failed to establish neural link.");
     }
   };
 
@@ -102,7 +99,7 @@ export default function Settings() {
     try {
       await updateDoc(userRef, formData);
       await refreshProfile();
-      toast.success("Neural Configuration Synchronized.");
+      alert("Neural Configuration Synchronized.");
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${profile.id}`);
     }
@@ -139,15 +136,13 @@ export default function Settings() {
                     className="w-full bg-white/5 border-2 border-white/10 rounded-[12px] p-5 pr-14 text-[1.4rem] font-bold focus:bg-white/10 focus:border-sb-gold transition-all outline-none"
                   />
                   {formData.apiKeys.gemini && (
-                    <Tooltip content="Clear Key" placement="left">
-                      <button
-                        onClick={() => handleClearKey('gemini')}
-                        aria-label="Clear Gemini API key"
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </Tooltip>
+                    <button 
+                      onClick={() => handleClearKey('gemini')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-red-400 transition-colors"
+                      title="Clear Key"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   )}
                 </div>
               </div>
@@ -162,15 +157,13 @@ export default function Settings() {
                     className="w-full bg-white/5 border-2 border-white/10 rounded-[12px] p-5 pr-14 text-[1.4rem] font-bold focus:bg-white/10 focus:border-sb-gold transition-all outline-none"
                   />
                   {formData.apiKeys.anthropic && (
-                    <Tooltip content="Clear Key" placement="left">
-                      <button
-                        onClick={() => handleClearKey('anthropic')}
-                        aria-label="Clear Anthropic API key"
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </Tooltip>
+                    <button 
+                      onClick={() => handleClearKey('anthropic')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-red-400 transition-colors"
+                      title="Clear Key"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   )}
                 </div>
               </div>
@@ -185,15 +178,13 @@ export default function Settings() {
                     className="w-full bg-white/5 border-2 border-white/10 rounded-[12px] p-5 pr-14 text-[1.4rem] font-bold focus:bg-white/10 focus:border-sb-gold transition-all outline-none"
                   />
                   {formData.apiKeys.openai && (
-                    <Tooltip content="Clear Key" placement="left">
-                      <button
-                        onClick={() => handleClearKey('openai')}
-                        aria-label="Clear OpenAI API key"
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </Tooltip>
+                    <button 
+                      onClick={() => handleClearKey('openai')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-red-400 transition-colors"
+                      title="Clear Key"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   )}
                 </div>
               </div>

@@ -1,12 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Lora", ui-serif, Georgia, serif;
-  --font-display: "EB Garamond", "Times New Roman", serif;
 
-  /* ── Fourdoor app tokens ── */
   --color-sb-green: #006241;
   --color-sb-accent: #00754A;
   --color-sb-house: #1E3932;
@@ -15,39 +13,12 @@
   --color-sb-gold: #cba258;
   --color-sb-cream: #f2f0eb;
   --color-sb-ceramic: #edebe9;
-
+  
   --tracking-sb: -0.01em;
-
+  
   --shadow-sb-card: 0px 0px 0.5px 0px rgba(0,0,0,0.14), 0px 1px 1px 0px rgba(0,0,0,0.24);
   --shadow-sb-nav: 0 1px 3px rgba(0,0,0,0.1), 0 2px 2px rgba(0,0,0,0.06), 0 0 2px rgba(0,0,0,0.07);
   --shadow-sb-frap: 0 0 6px rgba(0,0,0,0.24), 0 8px 12px rgba(0,0,0,0.14);
-
-  /* ── ElevenLabs-inspired editorial tokens ── */
-  --color-el-canvas: #f5f5f5;
-  --color-el-canvas-soft: #fafafa;
-  --color-el-surface-card: #ffffff;
-  --color-el-surface-strong: #f0efed;
-  --color-el-surface-dark: #0c0a09;
-  --color-el-surface-dark-elevated: #1c1917;
-  --color-el-primary: #292524;
-  --color-el-primary-active: #0c0a09;
-  --color-el-hairline: #e7e5e4;
-  --color-el-hairline-strong: #d6d3d1;
-  --color-el-ink: #0c0a09;
-  --color-el-body: #4e4e4e;
-  --color-el-body-strong: #292524;
-  --color-el-muted: #777169;
-  --color-el-muted-soft: #a8a29e;
-  --color-el-on-dark: #ffffff;
-  --color-el-on-dark-soft: #a8a29e;
-  --color-el-mint: #a7e5d3;
-  --color-el-peach: #f4c5a8;
-  --color-el-lavender: #c8b8e0;
-  --color-el-sky: #a8c8e8;
-  --color-el-rose: #e8b8c4;
-
-  --shadow-el-card: 0 4px 16px rgba(0,0,0,0.04);
-  --shadow-el-card-hover: 0 8px 32px rgba(0,0,0,0.08);
 }
 
 @layer base {
@@ -85,65 +56,6 @@
   .sb-shadow-frap {
     box-shadow: var(--shadow-sb-frap);
   }
-
-  /* ElevenLabs editorial components */
-  .el-display {
-    font-family: var(--font-display);
-    font-weight: 300;
-    letter-spacing: -0.02em;
-  }
-
-  .el-btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
-    height: 40px;
-    background: var(--color-el-primary);
-    color: #fff;
-    font-family: "Inter", sans-serif;
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 1;
-    border-radius: 9999px;
-    border: none;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-  .el-btn-primary:hover { background: var(--color-el-primary-active); }
-  .el-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .el-btn-outline {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
-    height: 40px;
-    background: transparent;
-    color: var(--color-el-ink);
-    font-family: "Inter", sans-serif;
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 1;
-    border-radius: 9999px;
-    border: 1px solid var(--color-el-hairline-strong);
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-  }
-  .el-btn-outline:hover { border-color: var(--color-el-primary); background: rgba(0,0,0,0.02); }
-  .el-btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .el-card {
-    background: var(--color-el-surface-card);
-    border: 1px solid var(--color-el-hairline);
-    border-radius: 16px;
-    box-shadow: var(--shadow-el-card);
-    transition: box-shadow 0.2s;
-  }
-  .el-card:hover { box-shadow: var(--shadow-el-card-hover); }
-
-  .el-shadow-card { box-shadow: var(--shadow-el-card); }
-  .el-shadow-hover { box-shadow: var(--shadow-el-card-hover); }
 }
 
 @layer utilities {
@@ -157,7 +69,15 @@
 }
 
 /* Custom scrollbars */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { @apply bg-sb-house/20 rounded-full; }
-::-webkit-scrollbar-thumb:hover { @apply bg-sb-house/40; }
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-sb-house/20 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-sb-house/40;
+}

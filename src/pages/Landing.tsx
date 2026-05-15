@@ -1,51 +1,9 @@
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
-import { ArrowRight, Zap, BarChart3, Users, Send, Mic2, Twitter, Instagram, Linkedin, Youtube, CheckCircle2 } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Send, Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
-/* ── Atmospheric gradient orb ──────────────────────────────────────────── */
-function GradientOrb({ color, className }: { color: string; className?: string }) {
-  return (
-    <div
-      aria-hidden="true"
-      className={cn("absolute rounded-full pointer-events-none", className)}
-      style={{ background: `radial-gradient(ellipse at center, ${color}55 0%, ${color}22 40%, transparent 70%)` }}
-    />
-  );
-}
-
-/* ── Orb feature card ───────────────────────────────────────────────────── */
-function OrbCard({ color, headline, body }: { color: string; headline: string; body: string }) {
-  return (
-    <div className="relative overflow-hidden rounded-[24px] p-8 flex flex-col justify-end min-h-[22rem]"
-      style={{ background: "var(--color-el-canvas-soft)", border: "1px solid var(--color-el-hairline)" }}>
-      <GradientOrb color={color} className="w-[28rem] h-[28rem] -top-24 -right-24 opacity-80" />
-      <div className="relative z-10">
-        <p className="el-display text-[2.8rem] leading-[1.15]" style={{ color: "var(--color-el-ink)" }}>{headline}</p>
-        <p className="mt-3 text-[1.5rem] leading-relaxed" style={{ color: "var(--color-el-muted)", letterSpacing: "0.015em" }}>{body}</p>
-      </div>
-    </div>
-  );
-}
-
-/* ── Feature card ───────────────────────────────────────────────────────── */
-function FeatureCard({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {
-  return (
-    <div className="el-card p-6 flex flex-col gap-4">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-        style={{ background: "var(--color-el-surface-strong)" }}>
-        <Icon size={18} style={{ color: "var(--color-el-ink)" }} />
-      </div>
-      <div>
-        <p className="font-medium text-[1.5rem]" style={{ color: "var(--color-el-ink)", letterSpacing: "0.18px" }}>{title}</p>
-        <p className="mt-2 text-[1.4rem] leading-relaxed" style={{ color: "var(--color-el-body)", letterSpacing: "0.15px" }}>{description}</p>
-      </div>
-    </div>
-  );
-}
-
-/* ── Main page ─────────────────────────────────────────────────────────── */
 export default function Landing() {
   const { signIn, user, profile, loading } = useAuth();
   const navigate = useNavigate();
@@ -54,27 +12,11 @@ export default function Landing() {
     if (loading) return;
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
-      return;
-    }
-    setSigningIn(true);
-    try {
+    } else {
       const { isNewUser } = await signIn();
       navigate(isNewUser ? "/onboarding" : "/dashboard");
-    } catch (err: any) {
-      const code: string = err?.code ?? "";
-      if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
-        toast.error(err?.message ?? "Sign-in failed. Please try again.");
-      }
-    } finally {
-      setSigningIn(false);
     }
   };
-
-  const plans = [
-    { name: "Starter", price: "29", info: "For solo creators & founders.", features: ["5 AI posts / day", "Lead scoring engine", "2 platforms"] },
-    { name: "Pro", price: "79", info: "For growth-stage teams.", features: ["Unlimited AI posts", "Full lead intelligence", "All platforms", "Priority generation"], featured: true },
-    { name: "Agency", price: "199", info: "For agencies & enterprises.", features: ["Everything in Pro", "Client workspaces", "White-label export", "SLA support"] },
-  ];
 
   return (
     <div className="bg-sb-cream min-h-screen">
@@ -90,7 +32,6 @@ export default function Landing() {
              <a href="#rewards" className="hover:text-sb-green transition-colors">Growth Rewards</a>
              <a href="#gift" className="hover:text-sb-green transition-colors">Gift Access</a>
           </div>
-          <span className="font-semibold text-[1.5rem] tracking-tight" style={{ color: "var(--color-el-ink)" }}>Fourdoor</span>
         </div>
         <div className="flex items-center gap-6">
           <button 
@@ -106,221 +47,177 @@ export default function Landing() {
             Join now
           </button>
         </div>
-      </header>
+      </nav>
 
-      {/* ── Hero Band ──────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden text-center px-6 py-[96px] md:py-[120px]">
-        {/* Atmospheric orbs */}
-        <GradientOrb color="var(--color-el-mint)"    className="w-[50rem] h-[50rem] -left-48 top-0 opacity-60" />
-        <GradientOrb color="var(--color-el-peach)"   className="w-[40rem] h-[40rem] -right-32 top-16 opacity-50" />
-        <GradientOrb color="var(--color-el-lavender)" className="w-[36rem] h-[36rem] left-1/2 -translate-x-1/2 top-8 opacity-40" />
-
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-10 text-[1.2rem] font-semibold uppercase tracking-[0.96px]"
-              style={{ background: "var(--color-el-surface-strong)", color: "var(--color-el-muted)" }}>
-              Autonomous Marketing Platform
-            </div>
-
-            <h1 className="el-display text-[clamp(4rem,8vw,7.2rem)] leading-[1.05] mb-8"
-              style={{ letterSpacing: "clamp(-0.96px,-0.02em,-1.92px)", color: "var(--color-el-ink)" }}>
-              Your brand.<br />Always on.
+      {/* Hero Section */}
+      <header className="grid grid-cols-1 lg:grid-cols-2 bg-sb-green text-white min-h-[60rem]">
+        <div className="flex flex-col justify-center p-12 lg:p-24 bg-sb-house order-2 lg:order-1">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8 }}
+          >
+            <h1 className="text-[clamp(3.5rem,6vw,5.8rem)] leading-[1.2] font-semibold mb-8">
+              Autonomous marketing <br /> starts here.
             </h1>
-
-            <p className="max-w-xl mx-auto text-[1.6rem] leading-relaxed mb-12"
-              style={{ color: "var(--color-el-body)", letterSpacing: "0.16px" }}>
-              Fourdoor's AI agents generate content, qualify leads, and book sales calls — autonomously, around the clock.
+            <p className="max-w-lg text-[1.9rem] leading-relaxed mb-12 opacity-80">
+              Join Fourdoor Growth Engine™ today and start automating your social distribution and lead generation automatically.
             </p>
-
-            <div className="flex items-center justify-center gap-4 flex-wrap">
-              <button onClick={handleStart} disabled={signingIn} className="el-btn-primary" style={{ height: "44px", padding: "0 24px", fontSize: "15px" }}>
-                {signingIn ? "Signing in…" : "Get started free"}
-                {!signingIn && <ArrowRight size={15} />}
-              </button>
-              <button onClick={handleStart} className="el-btn-outline" style={{ height: "44px", padding: "0 24px", fontSize: "15px" }}>
-                See how it works
-              </button>
-            </div>
+            <button 
+              onClick={handleStart}
+              className="px-8 py-3 border border-white rounded-full text-[1.6rem] font-bold sb-button-active hover:bg-white hover:text-sb-house"
+            >
+              Learn more
+            </button>
           </motion.div>
         </div>
-      </section>
-
-      {/* ── Feature grid ───────────────────────────────────────────── */}
-      <section id="features" className="px-6 md:px-12 py-[96px] max-w-[1200px] mx-auto">
-        <div className="mb-16">
-          <p className="text-[1.2rem] font-semibold uppercase tracking-[0.96px] mb-4"
-            style={{ color: "var(--color-el-muted)" }}>What we automate</p>
-          <h2 className="el-display text-[clamp(2.8rem,5vw,4rem)] leading-[1.17]"
-            style={{ color: "var(--color-el-ink)", letterSpacing: "-0.36px" }}>
-            The full growth stack,<br />driven by AI agents.
-          </h2>
+        <div className="bg-[#d4e9e2] flex items-center justify-center p-12 order-1 lg:order-2">
+           <motion.div 
+             initial={{ opacity: 0, x: 20 }}
+             animate={{ opacity: 1, x: 0 }}
+             className="relative w-full max-w-lg aspect-square bg-sb-green/10 rounded-full flex items-center justify-center"
+           >
+              <Zap className="w-48 h-48 text-sb-green animate-pulse" />
+           </motion.div>
         </div>
+      </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <FeatureCard icon={Mic2} title="Content Generation" description="AI writes platform-native captions, hooks, and scripts calibrated to your brand voice." />
-          <FeatureCard icon={Users} title="Lead Intelligence" description="Engagement signals are scored in real time. High-intent leads surface automatically." />
-          <FeatureCard icon={BarChart3} title="Performance Analytics" description="Pattern analysis surfaces what's working and rewrites your strategy on the fly." />
-          <FeatureCard icon={Send} title="Multi-Platform Distribution" description="Schedule and publish across LinkedIn, TikTok, Instagram, X, and more from one queue." />
-          <FeatureCard icon={Zap} title="AI Engagement Agent" description="Auto-reply to DMs and comments. Qualify intent, nurture interest, and route hot leads." />
-          <FeatureCard icon={CheckCircle2} title="Automated Booking" description="Sales calls book themselves. The agent qualifies, proposes times, and confirms." />
-        </div>
-      </section>
-
-      {/* ── Orb capabilities section ───────────────────────────────── */}
-      <section id="capabilities" className="px-6 md:px-12 py-[96px]"
-        style={{ background: "var(--color-el-canvas-soft)" }}>
-        <div className="max-w-[1200px] mx-auto">
-          <div className="mb-16">
-            <p className="text-[1.2rem] font-semibold uppercase tracking-[0.96px] mb-4"
-              style={{ color: "var(--color-el-muted)" }}>Core capabilities</p>
-            <h2 className="el-display text-[clamp(2.8rem,5vw,4rem)] leading-[1.17]"
-              style={{ color: "var(--color-el-ink)", letterSpacing: "-0.36px" }}>
-              Intelligence as a service.
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <OrbCard color="var(--color-el-mint)" headline="Content Engine" body="Brand-voice calibrated posts generated and scheduled in seconds." />
-            <OrbCard color="var(--color-el-lavender)" headline="Lead Scoring" body="Every engagement signal weighted, ranked, and surfaced to your inbox." />
-            <OrbCard color="var(--color-el-peach)" headline="Auto Booking" body="Qualified leads move from inbox to calendar without human intervention." />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Pricing ────────────────────────────────────────────────── */}
-      <section id="pricing" className="px-6 md:px-12 py-[96px] max-w-[1200px] mx-auto">
-        <div className="mb-16 text-center">
-          <p className="text-[1.2rem] font-semibold uppercase tracking-[0.96px] mb-4"
-            style={{ color: "var(--color-el-muted)" }}>Pricing</p>
-          <h2 className="el-display text-[clamp(2.8rem,5vw,4rem)] leading-[1.17]"
-            style={{ color: "var(--color-el-ink)", letterSpacing: "-0.36px" }}>
-            Scale at your own pace.
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan) => (
-            <div key={plan.name}
-              className={cn("rounded-[16px] p-8 flex flex-col border transition-shadow", plan.featured ? "hover:shadow-xl" : "hover:el-shadow-hover")}
-              style={{
-                background: plan.featured ? "var(--color-el-surface-dark)" : "var(--color-el-surface-card)",
-                borderColor: plan.featured ? "var(--color-el-surface-dark-elevated)" : "var(--color-el-hairline)",
-                boxShadow: plan.featured ? "0 8px 32px rgba(0,0,0,0.18)" : "var(--shadow-el-card)",
-              }}>
-              <div className="mb-6">
-                <p className="text-[1.2rem] font-semibold uppercase tracking-[0.96px] mb-1"
-                  style={{ color: plan.featured ? "var(--color-el-on-dark-soft)" : "var(--color-el-muted)" }}>{plan.name}</p>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="el-display text-[4.8rem] leading-none"
-                    style={{ color: plan.featured ? "var(--color-el-on-dark)" : "var(--color-el-ink)" }}>€{plan.price}</span>
-                  <span className="text-[1.4rem]" style={{ color: plan.featured ? "var(--color-el-on-dark-soft)" : "var(--color-el-muted)" }}>/mo</span>
-                </div>
-                <p className="text-[1.4rem]" style={{ color: plan.featured ? "var(--color-el-on-dark-soft)" : "var(--color-el-body)", letterSpacing: "0.15px" }}>{plan.info}</p>
-              </div>
-
-              <ul className="flex flex-col gap-3 mb-8 flex-1">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-3 text-[1.4rem]"
-                    style={{ color: plan.featured ? "var(--color-el-on-dark)" : "var(--color-el-body)", letterSpacing: "0.15px" }}>
-                    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                      style={{ background: plan.featured ? "#ffffff22" : "var(--color-el-surface-strong)" }}>
-                      <CheckCircle2 size={10} style={{ color: plan.featured ? "white" : "var(--color-el-ink)" }} />
-                    </div>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <button onClick={handleStart} disabled={signingIn}
-                className={plan.featured ? "el-btn-outline" : "el-btn-primary"}
-                style={plan.featured ? { borderColor: "#ffffff44", color: "white", width: "100%", justifyContent: "center" } : { width: "100%", justifyContent: "center" }}>
-                {signingIn ? "Signing in…" : "Get started"}
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── CTA Band ───────────────────────────────────────────────── */}
-      <section className="px-6 md:px-12 py-[96px] text-center"
-        style={{ background: "var(--color-el-canvas-soft)", borderTop: "1px solid var(--color-el-hairline)" }}>
-        <div className="max-w-2xl mx-auto">
-          <h2 className="el-display text-[clamp(2.8rem,5vw,4rem)] leading-[1.17] mb-8"
-            style={{ color: "var(--color-el-ink)", letterSpacing: "-0.36px" }}>
-            Ready to automate your growth?
-          </h2>
-          <p className="text-[1.6rem] leading-relaxed mb-10"
-            style={{ color: "var(--color-el-body)", letterSpacing: "0.16px" }}>
-            Join founders and agencies using Fourdoor to scale without hiring.
+      {/* Intro Section */}
+      <section className="py-24 px-12 max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-24">
+        <div className="flex-1 space-y-8">
+          <h2 className="text-[2.8rem] font-semibold text-sb-green uppercase">Intelligence as a service.</h2>
+          <p className="text-[1.6rem] leading-relaxed text-black/70">
+            Our neural engine doesn't just post content; it learns your brand voice, identifies high-intent targets, and scales your footprint while you focus on closing.
           </p>
-          <button onClick={handleStart} disabled={signingIn} className="el-btn-primary" style={{ height: "48px", padding: "0 28px", fontSize: "15px" }}>
-            {signingIn ? "Signing in…" : "Start for free"}
-            {!signingIn && <ArrowRight size={15} />}
+          <button 
+            onClick={handleStart}
+            className="px-8 py-3 bg-sb-accent text-white rounded-full text-[1.6rem] font-bold sb-button-active shadow-lg"
+          >
+            Explore our platform
           </button>
         </div>
+        <div className="flex-1 grid grid-cols-2 gap-8">
+           {[
+             { label: "Content Gen", icon: CheckCircle2 },
+             { label: "Lead Scoring", icon: Zap },
+             { label: "Auto Booking", icon: BarChart3 },
+             { label: "Distribution", icon: Send }
+           ].map((item, i) => (
+             <div key={i} className="bg-white p-8 rounded-[12px] sb-shadow-card flex flex-col items-center text-center gap-4 hover:-translate-y-1 transition-all">
+                <item.icon className="text-sb-green w-10 h-10" />
+                <span className="font-bold uppercase text-[1.2rem] tracking-wider">{item.label}</span>
+             </div>
+           ))}
+        </div>
       </section>
 
-      {/* ── Footer ─────────────────────────────────────────────────── */}
-      <footer className="px-6 md:px-12 py-16"
-        style={{ background: "var(--color-el-canvas)", borderTop: "1px solid var(--color-el-hairline)" }}>
-        <div className="max-w-[1200px] mx-auto grid grid-cols-2 md:grid-cols-5 gap-12">
-          {/* Brand column */}
-          <div className="col-span-2">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center"
-                style={{ background: "var(--color-el-primary)" }}>
-                <Zap size={11} color="white" fill="white" />
+      {/* Pricing - Rewards Experience */}
+      <section id="pricing" className="bg-sb-ceramic py-32 px-12">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-24">
+            <h2 className="font-serif italic text-sb-green text-[5rem] mb-4">Choose your tier.</h2>
+            <p className="text-[1.6rem] text-black/60 uppercase tracking-widest font-bold">Free growth is just the beginning.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {[
+              { name: "Starter", price: "29", info: "Perfect for builders." },
+              { name: "Pro", price: "79", info: "For established teams.", featured: true },
+              { name: "Agency", price: "199", info: "Scalable enterprise." }
+            ].map((plan, i) => (
+              <div key={i} className={cn(
+                "p-12 rounded-[12px] flex flex-col text-center sb-shadow-card transition-all hover:scale-[1.02]",
+                plan.featured ? "bg-sb-house text-white" : "bg-white text-black"
+              )}>
+                <h3 className="text-[2.4rem] font-bold mb-2 italic font-serif">{plan.name}</h3>
+                <div className="flex items-baseline justify-center gap-1 mb-8">
+                  <span className="text-[4.5rem] font-black">€{plan.price}</span>
+                  <span className="opacity-50">/mo</span>
+                </div>
+                <p className="mb-12 opacity-80 font-medium">{plan.info}</p>
+                <ul className="text-left space-y-4 mb-16 grow text-[1.4rem]">
+                  <li className="flex gap-3 items-center"><CheckCircle2 className="w-4 h-4 text-sb-accent" /> AI Content Engine</li>
+                  <li className="flex gap-3 items-center"><CheckCircle2 className="w-4 h-4 text-sb-accent" /> Lead Intelligence</li>
+                  <li className="flex gap-3 items-center"><CheckCircle2 className="w-4 h-4 text-sb-accent" /> Multi-Relay Post</li>
+                </ul>
+                <button 
+                  onClick={handleStart}
+                  className={cn(
+                    "py-4 rounded-full font-bold text-[1.6rem] sb-button-active",
+                    plan.featured ? "bg-white text-sb-house" : "bg-sb-accent text-white"
+                  )}
+                >
+                  Get started
+                </button>
               </div>
-              <span className="font-semibold text-[1.5rem]" style={{ color: "var(--color-el-ink)" }}>Fourdoor</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-sb-house text-white py-32 px-12">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-24">
+          <div className="col-span-1 md:col-span-2">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                <Zap size={24} className="text-sb-house fill-sb-house" />
+              </div>
+              <span className="font-bold text-3xl tracking-sb uppercase">FOURDOOR</span>
             </div>
-            <p className="text-[1.4rem] leading-relaxed mb-6 max-w-xs"
-              style={{ color: "var(--color-el-body)", letterSpacing: "0.15px" }}>
-              Autonomous marketing for the next generation of builders.
+            <p className="max-w-sm text-white/60 text-[1.4rem] leading-relaxed">
+              Autonomous marketing for the next generation of builders. Scale your impact without scaling your team.
             </p>
-            <div className="flex gap-3">
-              {[Twitter, Instagram, Linkedin, Youtube].map((Icon, i) => (
-                <a key={i} href="#"
-                  className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                  style={{ background: "var(--color-el-surface-strong)" }}
-                  onMouseOver={e => (e.currentTarget.style.background = "var(--color-el-hairline)")}
-                  onMouseOut={e => (e.currentTarget.style.background = "var(--color-el-surface-strong)")}>
-                  <Icon size={14} style={{ color: "var(--color-el-muted)" }} />
-                </a>
-              ))}
+            <div className="flex gap-6 mt-10">
+              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
+                <Twitter size={18} className="text-white/40 group-hover:text-white transition-colors" />
+              </a>
+              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
+                <Instagram size={18} className="text-white/40 group-hover:text-white transition-colors" />
+              </a>
+              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
+                <Linkedin size={18} className="text-white/40 group-hover:text-white transition-colors" />
+              </a>
+              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
+                <Youtube size={18} className="text-white/40 group-hover:text-white transition-colors" />
+              </a>
             </div>
           </div>
-
-          {/* Link columns */}
-          {[
-            { heading: "Platform", links: ["Content Engine", "Lead Inbox", "Analytics", "Distribution"] },
-            { heading: "Company", links: ["About", "Careers", "Blog", "Contact"] },
-            { heading: "Legal", links: ["Privacy", "Terms", "Security", "Cookies"] },
-          ].map(col => (
-            <div key={col.heading}>
-              <p className="text-[1.2rem] font-semibold uppercase tracking-[0.96px] mb-5"
-                style={{ color: "var(--color-el-ink)" }}>{col.heading}</p>
-              <ul className="flex flex-col gap-4">
-                {col.links.map(l => (
-                  <li key={l}>
-                    <a href="#" className="text-[1.4rem] transition-colors"
-                      style={{ color: "var(--color-el-body)", letterSpacing: "0.15px" }}
-                      onMouseOver={e => (e.currentTarget.style.color = "var(--color-el-ink)")}
-                      onMouseOut={e => (e.currentTarget.style.color = "var(--color-el-body)")}>
-                      {l}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+          <div>
+            <h4 className="font-bold text-[1.6rem] mb-12 uppercase tracking-loose">Platform</h4>
+            <div className="flex flex-col gap-6 text-white/50 text-[1.4rem] font-medium transition-all">
+              <a href="#" className="hover:text-white">Content Engine</a>
+              <a href="#" className="hover:text-white">Lead Inbox</a>
+              <a href="#" className="hover:text-white">Distribution</a>
+              <a href="#" className="hover:text-white">Analytics</a>
             </div>
-          ))}
+          </div>
+          <div>
+            <h4 className="font-bold text-[1.6rem] mb-12 uppercase tracking-loose">Company</h4>
+            <div className="flex flex-col gap-6 text-white/50 text-[1.4rem] font-medium transition-all">
+              <a href="#" className="hover:text-white">About Us</a>
+              <a href="#" className="hover:text-white">Careers</a>
+              <a href="#" className="hover:text-white">Contact</a>
+              <a href="#" className="hover:text-white">Privacy</a>
+            </div>
+          </div>
         </div>
-
-        <div className="max-w-[1200px] mx-auto mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4"
-          style={{ borderTop: "1px solid var(--color-el-hairline)" }}>
-          <p className="text-[1.3rem]" style={{ color: "var(--color-el-muted-soft)" }}>© 2026 Fourdoor AI. All rights reserved.</p>
-          <p className="text-[1.3rem]" style={{ color: "var(--color-el-muted-soft)" }}>Built for autonomous growth.</p>
+        <div className="max-w-7xl mx-auto mt-32 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
+           <p className="text-[1.2rem] text-white/40">© 2026 Fourdoor Coffee & Code Co. All rights reserved.</p>
+           <div className="flex gap-12 text-sb-gold font-bold text-[1.3rem]">
+              <a href="#" className="hover:underline">Terms of Service</a>
+              <a href="#" className="hover:underline">Legal</a>
+           </div>
         </div>
       </footer>
+
+      {/* Signature Floating Frap Button */}
+      <button 
+        onClick={handleStart}
+        className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-[60]"
+      >
+        <Zap className="fill-white" />
+      </button>
     </div>
   );
 }
