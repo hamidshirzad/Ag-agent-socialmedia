@@ -1,11 +1,8 @@
-import { useState } from "react";
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import { ArrowRight, Zap, BarChart3, Users, Send, Mic2, Twitter, Instagram, Linkedin, Youtube, CheckCircle2 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { cn } from "../lib/utils";
-import { Meta } from "../components/Meta";
-import { useToast } from "../components/Toast";
 
 /* ── Atmospheric gradient orb ──────────────────────────────────────────── */
 function GradientOrb({ color, className }: { color: string; className?: string }) {
@@ -52,11 +49,9 @@ function FeatureCard({ icon: Icon, title, description }: { icon: any; title: str
 export default function Landing() {
   const { signIn, user, profile, loading } = useAuth();
   const navigate = useNavigate();
-  const toast = useToast();
-  const [signingIn, setSigningIn] = useState(false);
 
   const handleStart = async () => {
-    if (loading || signingIn) return;
+    if (loading) return;
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
       return;
@@ -82,35 +77,33 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen font-sans" style={{ background: "var(--color-el-canvas)", color: "var(--color-el-ink)" }}>
-      <Meta />
-
-      {/* ── Top Navigation ──────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 h-16 flex items-center px-6 md:px-12"
-        style={{ background: "var(--color-el-canvas)", borderBottom: "1px solid var(--color-el-hairline)" }}>
-        <div className="flex-1 flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center"
-            style={{ background: "var(--color-el-primary)" }}>
-            <Zap size={13} color="white" fill="white" />
+    <div className="bg-sb-cream min-h-screen">
+      {/* Navigation */}
+      <nav className="flex justify-between items-center px-12 py-6 bg-white sb-shadow-nav sticky top-0 z-50">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-sb-green rounded-full flex items-center justify-center shrink-0">
+            <Zap className="text-white w-6 h-6 fill-white" />
+          </div>
+          <span className="font-bold text-2xl tracking-sb text-sb-green uppercase">Fourdoor</span>
+          <div className="hidden md:flex items-center gap-8 ml-12 text-[1.4rem] font-bold uppercase tracking-widest">
+             <a href="#features" className="hover:text-sb-green transition-colors">Menu</a>
+             <a href="#rewards" className="hover:text-sb-green transition-colors">Growth Rewards</a>
+             <a href="#gift" className="hover:text-sb-green transition-colors">Gift Access</a>
           </div>
           <span className="font-semibold text-[1.5rem] tracking-tight" style={{ color: "var(--color-el-ink)" }}>Fourdoor</span>
         </div>
-
-        <nav className="hidden md:flex items-center gap-8 text-[1.5rem] font-medium" style={{ color: "var(--color-el-body)" }}>
-          <a href="#features" className="hover:text-black transition-colors" style={{ letterSpacing: "0" }}>Features</a>
-          <a href="#capabilities" className="hover:text-black transition-colors">Capabilities</a>
-          <a href="#pricing" className="hover:text-black transition-colors">Pricing</a>
-          <Link to="/contact" className="hover:text-black transition-colors">Contact</Link>
-        </nav>
-
-        <div className="flex-1 flex items-center justify-end gap-3">
-          <button onClick={handleStart} disabled={signingIn}
-            className="el-btn-outline text-[1.4rem]" style={{ height: "36px", padding: "0 16px" }}>
-            {signingIn ? "Signing in…" : "Sign in"}
+        <div className="flex items-center gap-6">
+          <button 
+            onClick={handleStart}
+            className="px-6 py-2 border border-black rounded-full text-[1.4rem] font-bold sb-button-active"
+          >
+            Sign in
           </button>
-          <button onClick={handleStart} disabled={signingIn} className="el-btn-primary text-[1.4rem]" style={{ height: "36px", padding: "0 16px" }}>
-            {signingIn ? "Signing in…" : "Try free"}
-            {!signingIn && <ArrowRight size={14} />}
+          <button 
+            onClick={handleStart}
+            className="px-6 py-2 bg-black text-white rounded-full text-[1.4rem] font-bold sb-button-active"
+          >
+            Join now
           </button>
         </div>
       </header>

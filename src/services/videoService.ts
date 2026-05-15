@@ -11,7 +11,7 @@ export async function generateVeoVideo(
   config: VideoGenerationConfig,
   onProgress: (status: string) => void
 ): Promise<string> {
-  const apiKey = (process.env as any).API_KEY;
+  const apiKey = typeof process !== 'undefined' ? (process.env as any).API_KEY : (window as any).API_KEY;
   if (!apiKey) throw new Error("API Key missing. Please select one.");
 
   const ai = new GoogleGenAI({ apiKey });
