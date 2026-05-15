@@ -17,6 +17,7 @@ import ScoringRules from "./pages/ScoringRules";
 import Billing from "./pages/Billing";
 import Campaigns from "./pages/Campaigns";
 import JobListings from "./pages/JobListings";
+import ApiHub from "./pages/ApiHub";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
           <Route path="/content" element={<ProtectedRoute><ContentEngine /></ProtectedRoute>} />
           <Route path="/jobs" element={<ProtectedRoute><JobListings /></ProtectedRoute>} />
+          <Route path="/api-hub" element={<ProtectedRoute><ApiHub /></ProtectedRoute>} />
           <Route path="/leads" element={<ProtectedRoute><LeadInbox /></ProtectedRoute>} />
           <Route path="/outreach" element={<ProtectedRoute><Outreach /></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
