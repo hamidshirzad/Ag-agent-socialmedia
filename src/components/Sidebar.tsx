@@ -1,16 +1,17 @@
 import { NavLink } from "react-router-dom";
 import { 
-  BarChart3, 
-  Users, 
-  Zap, 
-  Calendar, 
-  Inbox, 
-  Settings, 
+  BarChart3,
+  Users,
+  Zap,
+  Calendar,
+  Inbox,
+  Settings,
   LogOut,
   Target,
   Rocket,
   TrendingUp,
-  CreditCard
+  CreditCard,
+  Briefcase
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { cn } from "../lib/utils";
@@ -22,6 +23,7 @@ export function Sidebar() {
     { icon: BarChart3, label: "Overview", h: "/dashboard" },
     { icon: Target, label: "Campaigns", h: "/campaigns" },
     { icon: Rocket, label: "Content Engine", h: "/content" },
+    { icon: Briefcase, label: "Job Signals", h: "/jobs" },
     { icon: Inbox, label: "Lead Inbox", h: "/leads" },
     { icon: TrendingUp, label: "Scoring Engine", h: "/scoring" },
     { icon: CreditCard, label: "Billing", h: "/billing" },

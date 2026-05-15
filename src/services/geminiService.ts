@@ -28,6 +28,31 @@ export async function generateMarketingContent(
   return generateContentWithEngine(prompt, { provider, apiKey: userKey });
 }
 
+export async function generateJobListings(
+  industry: string,
+  seniority: string,
+  count: number,
+  apiKeys?: any,
+  provider: 'gemini' | 'anthropic' | 'openai' = 'gemini'
+) {
+  const prompt = `
+    Act as a senior recruiter. Generate ${count} realistic job listings for the ${industry} industry.
+    Seniority level: ${seniority}
+
+    Return a JSON object with exactly these keys:
+    - job_categories: Array of category strings (e.g. "Engineering", "Design")
+    - jobs: Array of { company_name: string, role: string }
+
+    Make company names realistic and varied. Roles should match the seniority level.
+  `;
+
+  const userKey = provider === 'gemini' ? apiKeys?.gemini
+                : provider === 'anthropic' ? apiKeys?.anthropic
+                : apiKeys?.openai;
+
+  return generateContentWithEngine(prompt, { provider, apiKey: userKey });
+}
+
 export async function analyzeLeadIntent(message: string, apiKeys?: any) {
   const prompt = `
     Analyze the intent of this message from a potential lead: "${message}"
