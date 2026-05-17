@@ -1,0 +1,46 @@
+# Helm values for the Datadog Operator.
+# Usage:
+#   helm repo add datadog https://helm.datadoghq.com && helm repo update
+#   helm upgrade --install datadog-operator datadog/datadog-operator \
+#     -n datadog --create-namespace -f datadog-values.yaml
+#
+# IMPORTANT — create the Secret before running the above:
+#   kubectl create namespace datadog
+#   kubectl -n datadog create secret generic datadog-secret \
+#     --from-literal api-key='<YOUR_DD_API_KEY>'
+#
+# This file configures the Operator process only.
+# The Agent itself (DaemonSet, Cluster Agent, APM, LLMObs) is configured
+# in datadog-agent.yaml.
+
+replicaCount: 1
+
+# EU region — must match spec.global.site in datadog-agent.yaml.
+site: datadoghq.eu
+
+# Ensure the DatadogAgent CRD is installed by the chart so
+# `kubectl apply -f datadog-agent.yaml` works immediately after.
+installCRDs: true
+
+# Enable the admission controller webhook in the operator.
+# Required for APM auto-instrumentation (library injection into app pods).
+admissionController:
+  enabled: true
+  # Safer default: only mutate pods that explicitly opt in via label:
+  #   admission.datadoghq.com/enabled: "true"
+  # Set to true to inject into all pods in watched namespaces.
+  mutateUnlabelled: false
+
+# Limit the operator's watch scope to the datadog namespace.
+# If your application pods live in a different namespace (e.g. "default"),
+# add that namespace here or remove this field to watch all namespaces.
+watchNamespaces:
+  - datadog
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
