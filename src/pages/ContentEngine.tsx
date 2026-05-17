@@ -47,7 +47,7 @@ export default function ContentEngine() {
     const q = query(collection(db, "campaigns"), where("userId", "==", profile.id), where("active", "==", true));
     return onSnapshot(q, (snapshot) => {
       setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Campaign[]);
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, "campaigns"));
   }, [profile]);
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -605,12 +605,21 @@ export default function ContentEngine() {
   );
 }
 
-function ContentBlock({ icon: Icon, title, content }: any) {
+function ContentBlock({ icon: Icon, title, content }: { icon: any; title: string; content: string }) {
+  const len = (content ?? "").length;
   return (
     <div>
-      <div className="flex items-center gap-3 mb-4 opacity-80">
-        <Icon size={16} className="text-sb-gold" />
-        <h4 className="text-[1.2rem] font-black uppercase tracking-widest text-sb-gold">{title}</h4>
+      <div className="flex items-center justify-between gap-3 mb-4 opacity-80">
+        <div className="flex items-center gap-3">
+          <Icon size={16} className="text-sb-gold" />
+          <h4 className="text-[1.2rem] font-black uppercase tracking-widest text-sb-gold">{title}</h4>
+        </div>
+        <span className={cn(
+          "text-[1rem] font-black uppercase tracking-widest",
+          len > 9500 ? "text-red-400" : "text-white/30"
+        )}>
+          {len.toLocaleString()} / 10,000
+        </span>
       </div>
       <p className="text-[1.4rem] text-white/80 leading-relaxed font-sans bg-white/5 p-6 rounded-[12px] border border-white/10 italic">
         {content}

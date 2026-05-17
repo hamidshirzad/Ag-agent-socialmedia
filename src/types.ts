@@ -34,7 +34,7 @@ export interface Post {
   platforms: string[];
   caption: string;
   mediaUrl?: string;
-  scheduledAt: any; // Firestore Timestamp or ISO String
+  scheduledAt?: import('firebase/firestore').Timestamp | string;
   status: 'draft' | 'scheduled' | 'posted';
   createdAt: string;
   metrics?: {

@@ -88,7 +88,7 @@ export default function Campaigns() {
       })) as Campaign[];
       setCampaigns(data);
       setLoading(false);
-    });
+    }, (err) => handleFirestoreError(err, OperationType.LIST, "campaigns"));
 
     return () => unsubscribe();
   }, [user]);
