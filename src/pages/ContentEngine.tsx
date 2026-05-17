@@ -6,12 +6,14 @@ import { generateMarketingContent } from "../services/geminiService";
 import { generateVeoVideo } from "../services/videoService";
 import { useAuth } from "../contexts/AuthContext";
 import { cn } from "../lib/utils";
+import { useToast } from "../components/Toast";
 import { collection, addDoc, serverTimestamp, query, where, onSnapshot, Timestamp } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { Campaign } from "../types";
 
 export default function ContentEngine() {
   const { profile } = useAuth();
+  const toast = useToast();
   const [niche, setNiche] = useState(profile?.niche || "");
   const [audience, setAudience] = useState("");
   const [goal, setGoal] = useState(profile?.goals || "");
@@ -70,7 +72,7 @@ export default function ContentEngine() {
       setResult(data);
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : "Synthesis failed. Check your API keys in Settings.");
+      toast.error(err instanceof Error ? err.message : "Synthesis failed. Check your API keys in Settings.");
     } finally {
       setIsGenerating(false);
     }
@@ -78,7 +80,7 @@ export default function ContentEngine() {
 
   const handleSaveDraft = async () => {
     if (!profile || !result) {
-      alert("No content to save.");
+      toast.error("No content to save.");
       return;
     }
 
@@ -120,7 +122,7 @@ export default function ContentEngine() {
       });
 
       await Promise.all(savePromises);
-      alert("Neural Artifact Saved! Content archived in your local library.");
+      toast.success("Neural Artifact Saved! Content archived in your local library.");
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, "posts");
     } finally {
@@ -130,7 +132,7 @@ export default function ContentEngine() {
 
   const handleDeploy = async () => {
     if (!profile || !result || selectedPlatforms.length === 0 || !scheduleDate) {
-      alert("Please select at least one platform and a schedule date.");
+      toast.error("Please select at least one platform and a schedule date.");
       return;
     }
 
@@ -171,7 +173,7 @@ export default function ContentEngine() {
       });
 
       await Promise.all(deploymentPromises);
-      alert("Neural Strategy Deployed! All posts have been synchronized and scheduled.");
+      toast.success("Neural Strategy Deployed! All posts have been synchronized and scheduled.");
       setResult(null);
       setSelectedPlatforms([]);
       setScheduleDate("");

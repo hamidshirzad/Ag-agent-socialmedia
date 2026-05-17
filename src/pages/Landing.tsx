@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../components/Toast";
 import { ArrowRight, Zap, BarChart3, Users, Send, Mic2, Twitter, Instagram, Linkedin, Youtube, CheckCircle2 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { cn } from "../lib/utils";
@@ -49,6 +51,8 @@ function FeatureCard({ icon: Icon, title, description }: { icon: any; title: str
 export default function Landing() {
   const { signIn, user, profile, loading } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
+  const [signingIn, setSigningIn] = useState(false);
 
   const handleStart = async () => {
     if (loading) return;
@@ -106,7 +110,7 @@ export default function Landing() {
             Join now
           </button>
         </div>
-      </header>
+      </nav>
 
       {/* ── Hero Band ──────────────────────────────────────────────── */}
       <section className="relative overflow-hidden text-center px-6 py-[96px] md:py-[120px]">

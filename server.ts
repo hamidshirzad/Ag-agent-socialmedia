@@ -1,3 +1,4 @@
+import './src/lib/datadog.js'; // must be first — initialises dd-trace + LLMObs
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -232,12 +233,12 @@ export function createApp() {
 
     try {
       // Log all events to Firestore for audit trail
-      await db.collection("billing_events").add({
-        id: event.id,
-        type: eventType,
-        resourceId: resource.id,
+      await targetDb.collection("billing_events").add({
+        id: event.id ?? null,
+        type: eventType ?? null,
+        resourceId: resource.id ?? null,
         receivedAt: new Date(),
-        data: resource
+        data: resource ?? null
       });
 
       switch (eventType) {
@@ -250,7 +251,7 @@ export function createApp() {
           console.log(`Subscription ${resource.id} activated.`);
           // Check for 'custom_id' or 'subscriber.email' to find user
           if (resource.subscriber?.email_address) {
-             const userQuery = await db.collection("users").where("email", "==", resource.subscriber.email_address).get();
+             const userQuery = await targetDb.collection("users").where("email", "==", resource.subscriber.email_address).get();
              if (!userQuery.empty) {
                await userQuery.docs[0].ref.update({ 
                  plan: "pro", 

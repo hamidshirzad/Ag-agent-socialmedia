@@ -3,6 +3,25 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import request from "supertest";
+
+// Mock Firebase Admin so Firestore calls don't hit the network
+vi.mock("firebase-admin/firestore", () => {
+  const mockAdd = vi.fn().mockResolvedValue({ id: "mock-doc-id" });
+  const mockWhere = vi.fn().mockReturnThis();
+  const mockGet = vi.fn().mockResolvedValue({ empty: true, docs: [] });
+  const mockCollection = vi.fn(() => ({ add: mockAdd, where: mockWhere, get: mockGet }));
+  return {
+    getFirestore: vi.fn(() => ({ collection: mockCollection })),
+  };
+});
+
+vi.mock("firebase-admin", () => ({
+  default: {
+    apps: [],
+    initializeApp: vi.fn(),
+  },
+}));
+
 import { createApp } from "./server";
 
 const app = createApp();
