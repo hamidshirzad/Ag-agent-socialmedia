@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, User, signInWithPopup, signOut } from "firebase/auth";
+import { onAuthStateChanged, User, signInWithPopup, signOut, GoogleAuthProvider } from "firebase/auth";
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { UserProfile } from "../types";
@@ -11,6 +11,8 @@ interface AuthContextType {
   signIn: () => Promise<{ isNewUser: boolean }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  accessToken: string | null;
+  setAccessToken: (token: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const fetchProfile = async (uid: string) => {
     try {
@@ -41,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await fetchProfile(user.uid);
       } else {
         setProfile(null);
+        setAccessToken(null);
       }
       setLoading(false);
     });
@@ -52,6 +56,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
       setUser(firebaseUser); // Update immediately to prevent race conditions
+
+      // Extract OAuth Credential to get Access Token
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setAccessToken(credential.accessToken);
+      }
 
       // Initialize profile if not exists
       const userRef = doc(db, "users", firebaseUser.uid);
@@ -80,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await signOut(auth);
+    setAccessToken(null);
   };
 
   const refreshProfile = async () => {
@@ -87,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, logout, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, logout, refreshProfile, accessToken, setAccessToken }}>
       {children}
     </AuthContext.Provider>
   );

@@ -50,12 +50,29 @@ const AVAILABLE_PLATFORMS = [
 ];
 
 export default function Calendar() {
-  const { profile } = useAuth();
+  const { profile, accessToken, signIn, setAccessToken } = useAuth();
   
   // Real Database States
   const [posts, setPosts] = useState<Post[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Google Calendar Integration States
+  const [gcalEvents, setGcalEvents] = useState<any[]>([]);
+  const [isGcalLoading, setIsGcalLoading] = useState(false);
+  const [gcalError, setGcalError] = useState<string | null>(null);
+
+  // Gcal Event Creation Form States
+  const [isGcalEventModalOpen, setIsGcalEventModalOpen] = useState(false);
+  const [gcalEventTitle, setGcalEventTitle] = useState("");
+  const [gcalEventDesc, setGcalEventDesc] = useState("");
+  const [gcalEventDate, setGcalEventDate] = useState("");
+  const [gcalEventStartTime, setGcalEventStartTime] = useState("09:00");
+  const [gcalEventEndTime, setGcalEventEndTime] = useState("10:00");
+  const [isCreatingGcalEvent, setIsCreatingGcalEvent] = useState(false);
+
+  // Sync scheduled post to Google Calendar state
+  const [postGcalSyncingMap, setPostGcalSyncingMap] = useState<Record<string, 'idle' | 'syncing' | 'synced'>>({});
 
   // Dynamic Calendly Assets Loading
   useEffect(() => {
@@ -126,6 +143,166 @@ export default function Calendar() {
 
   // Help prompt state
   const [illustrationSeed, setIllustrationSeed] = useState(Math.floor(Math.random() * 1000));
+
+  // --- Google Calendar Effects & Handlers ---
+  useEffect(() => {
+    if (!accessToken) {
+      setGcalEvents([]);
+      return;
+    }
+
+    const fetchGcal = async () => {
+      setIsGcalLoading(true);
+      setGcalError(null);
+      try {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        // Select wide window including current and adjacent months representing padding
+        const startOfBounds = new Date(year, month - 1, 1).toISOString();
+        const endOfBounds = new Date(year, month + 2, 0, 23, 59, 59).toISOString();
+
+        const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(startOfBounds)}&timeMax=${encodeURIComponent(endOfBounds)}&singleEvents=true&maxResults=250`;
+        
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            setAccessToken(null);
+            throw new Error("Session expired. Please reconnect your Google Calendar.");
+          }
+          throw new Error(`Google Calendar API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        setGcalEvents(data.items || []);
+      } catch (err: any) {
+        console.error("Error fetching Google Calendar events:", err);
+        setGcalError(err.message || "Failed to load Google Calendar events.");
+      } finally {
+        setIsGcalLoading(false);
+      }
+    };
+
+    fetchGcal();
+  }, [accessToken, currentDate, setAccessToken]);
+
+  const handleConnectGcal = async () => {
+    try {
+      await signIn();
+    } catch (err) {
+      console.error("Failed to authenticate Google Calendar:", err);
+    }
+  };
+
+  const handleCreateGcalEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessToken) return;
+
+    setIsCreatingGcalEvent(true);
+    try {
+      const startDateTime = new Date(`${gcalEventDate}T${gcalEventStartTime}`).toISOString();
+      const endDateTime = new Date(`${gcalEventDate}T${gcalEventEndTime}`).toISOString();
+
+      const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          summary: gcalEventTitle,
+          description: gcalEventDesc,
+          start: { dateTime: startDateTime },
+          end: { dateTime: endDateTime },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create Google Calendar event");
+      }
+
+      // Re-trigger fetch
+      setCurrentDate(new Date(currentDate));
+      setIsGcalEventModalOpen(false);
+      
+      // Clean form fields
+      setGcalEventTitle("");
+      setGcalEventDesc("");
+    } catch (err: any) {
+      alert("Error creating event: " + err.message);
+    } finally {
+      setIsCreatingGcalEvent(false);
+    }
+  };
+
+  const handleDeleteGcalEvent = async (eventId: string, eventTitle: string) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the Google Calendar event "${eventTitle}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete event");
+      }
+
+      // Re-trigger fetch
+      setCurrentDate(new Date(currentDate));
+    } catch (err: any) {
+      alert("Error deleting event: " + err.message);
+    }
+  };
+
+  const handleSyncPostToGcal = async (post: Post) => {
+    if (!accessToken) {
+      alert("Please connect your Google Calendar first using the button in the view filter bar.");
+      return;
+    }
+
+    setPostGcalSyncingMap(prev => ({ ...prev, [post.id]: 'syncing' }));
+    try {
+      const pDate = getPostDate(post.scheduledAt) || new Date();
+      // compute 30 min duration for the social post placeholder event
+      const endOfEvent = new Date(pDate.getTime() + 30 * 60000);
+
+      const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          summary: `📢 Scheduled Social Post (${post.platforms?.map(p => p.toUpperCase()).join("/") || 'Relay Grid'})`,
+          description: `Caption: ${post.caption}\n\nMedia URL: ${post.mediaUrl || 'None'}\nBrand Campaign ID: ${post.campaignId || 'None'}`,
+          start: { dateTime: pDate.toISOString() },
+          end: { dateTime: endOfEvent.toISOString() },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create Google Calendar event");
+      }
+
+      setPostGcalSyncingMap(prev => ({ ...prev, [post.id]: 'synced' }));
+      // Refresh events
+      setCurrentDate(new Date(currentDate));
+    } catch (err: any) {
+      alert("Failed to sync post to Google Calendar: " + err.message);
+      setPostGcalSyncingMap(prev => ({ ...prev, [post.id]: 'idle' }));
+    }
+  };
 
   // --- Date Parsers ---
   const getPostDate = (timestamp: any): Date | null => {
@@ -448,6 +625,19 @@ export default function Calendar() {
               <CalendarIcon size={16} className="text-sb-gold" /> Book a Demo
             </button>
 
+            {accessToken && (
+              <button 
+                onClick={() => {
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  setGcalEventDate(todayStr);
+                  setIsGcalEventModalOpen(true);
+                }}
+                className="px-10 py-4 bg-emerald-600 text-white rounded-full font-black text-[1.4rem] uppercase tracking-widest hover:bg-emerald-700 hover:shadow-lg transition-all flex items-center gap-3 cursor-pointer shadow-md"
+              >
+                <CalendarIcon size={16} className="text-white" /> Create GCal Event
+              </button>
+            )}
+
             <button 
               onClick={() => openScheduleModal(null)}
               className="px-10 py-4 bg-sb-accent text-white rounded-full font-black text-[1.4rem] uppercase tracking-widest hover:bg-sb-green hover:shadow-lg transition-all flex items-center gap-3 sb-button-active"
@@ -574,6 +764,37 @@ export default function Calendar() {
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-amber-500/10" />
                   Text
                 </span>
+                <span className="flex items-center gap-2 text-[1.15rem] font-bold text-black/60" title="Retrieved via Google Calendar API">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/10" />
+                  GCal Event
+                </span>
+              </div>
+
+              {/* Google Calendar Connection Control */}
+              <div className="flex items-center gap-3">
+                {accessToken ? (
+                  <div className="flex items-center gap-3 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-200">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[1.1rem] font-black text-emerald-800 uppercase tracking-wider">
+                      GCal Linked
+                    </span>
+                    <button 
+                      onClick={() => setAccessToken(null)}
+                      className="text-[1.05rem] font-black text-rose-500 hover:text-rose-700 uppercase tracking-wider transition-all cursor-pointer ml-1"
+                      title="Disconnect Google account calendar sync session"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={handleConnectGcal}
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-black text-[1.1rem] uppercase tracking-widest transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
+                    title="Connect Google Calendar to sync personal meetings"
+                  >
+                    <CalendarIcon size={12} /> Sync Google Calendar
+                  </button>
+                )}
               </div>
             </div>
 
@@ -602,6 +823,13 @@ export default function Calendar() {
                     return postDate && isSameDay(postDate, cell.date);
                   });
 
+                  // find matching Google Calendar events for this cell day
+                  const dayGcalEntries = gcalEvents.filter(evt => {
+                    if (!evt.start) return false;
+                    const evtDate = new Date(evt.start.dateTime || evt.start.date);
+                    return !isNaN(evtDate.getTime()) && isSameDay(evtDate, cell.date);
+                  });
+
                   const isToday = isSameDay(cell.date, new Date());
 
                   return (
@@ -624,8 +852,8 @@ export default function Calendar() {
                           </span>
 
                           {/* Post Type Dot Indicators */}
-                          {dayEntries.length > 0 && (
-                            <div className="flex items-center gap-1.5" title={`${dayEntries.length} Publication(s) Scheduled`}>
+                          {(dayEntries.length > 0 || dayGcalEntries.length > 0) && (
+                            <div className="flex items-center gap-1.5" title={`${dayEntries.length} Post(s), ${dayGcalEntries.length} Event(s) Scheduled`}>
                               {dayEntries.some(p => p.type === 'video') && (
                                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 ring-4 ring-rose-500/10" title="Video Content" />
                               )}
@@ -634,6 +862,9 @@ export default function Calendar() {
                               )}
                               {dayEntries.some(p => p.type === 'text') && (
                                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-amber-500/10" title="Text Content" />
+                              )}
+                              {dayGcalEntries.length > 0 && (
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/10" title="Google Calendar Event" />
                               )}
                             </div>
                           )}
@@ -691,6 +922,38 @@ export default function Calendar() {
                               {post.status === 'draft' && (
                                 <span className="text-[0.8rem] bg-white/10 text-white border border-white/20 px-1 py-0 rounded self-start transform scale-90 -translate-x-1">DRAFT</span>
                               )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Google Calendar Entries */}
+                        {dayGcalEntries.map((evt) => {
+                          const evtTime = evt.start?.dateTime ? new Date(evt.start.dateTime) : null;
+                          const formattedTime = evtTime ? evtTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : 'All Day';
+
+                          return (
+                            <div 
+                              key={evt.id}
+                              className="p-3 bg-emerald-500 hover:bg-emerald-600 font-bold text-[1.1rem] uppercase transition-all rounded-[6px] shadow-sm select-none cursor-pointer flex flex-col gap-1 text-white relative group/gcal"
+                              title={`${evt.summary || '(No Subject)'}\n${evt.description || 'Google Calendar Event'}`}
+                            >
+                              <div className="flex items-center justify-between pointer-events-none">
+                                <span className="opacity-80 text-[0.9rem] font-black">{formattedTime}</span>
+                                <span className="text-[0.8rem] font-black tracking-normal px-1 rounded bg-white/20">GCAL</span>
+                              </div>
+                              <div className="truncate text-[1.1rem] tracking-wide font-semibold opacity-95">{evt.summary || '(No Subject)'}</div>
+                              
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteGcalEvent(evt.id, evt.summary);
+                                }}
+                                className="absolute right-2 top-2 w-5 h-5 rounded bg-black/15 shadow-sm hover:bg-rose-600 hover:text-white flex items-center justify-center text-white scale-0 group-hover/gcal:scale-100 transition-transform cursor-pointer border-0"
+                                title="Delete event from Google Calendar"
+                              >
+                                <Trash2 size={10} />
+                              </button>
                             </div>
                           );
                         })}
@@ -821,6 +1084,131 @@ export default function Calendar() {
         </div>
 
         {/* SCHEDULE/EDIT MODAL DIALOG */}
+        {/* GOOGLE CALENDAR DIRECT EVENT MODAL */}
+        {isGcalEventModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white rounded-[16px] sb-shadow-frap w-full max-w-[50rem] overflow-hidden my-auto flex flex-col max-h-[85vh]">
+              
+              {/* Modal Head */}
+              <div className="p-8 border-b border-black/5 bg-emerald-50 flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-3">
+                  <CalendarIcon size={20} className="text-emerald-600" />
+                  <h3 className="text-emerald-800 font-bold text-[1.8rem] uppercase tracking-widest">
+                    Google Calendar Meeting Builder
+                  </h3>
+                </div>
+                <button 
+                  onClick={() => setIsGcalEventModalOpen(false)}
+                  className="w-10 h-10 rounded-full bg-emerald-100/50 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-all cursor-pointer border-0 text-emerald-800"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <form onSubmit={handleCreateGcalEvent} className="p-8 space-y-6 overflow-y-auto flex-grow">
+                
+                {/* Title */}
+                <div className="space-y-3">
+                  <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
+                    Event Title
+                  </label>
+                  <input 
+                    type="text"
+                    value={gcalEventTitle}
+                    onChange={(e) => setGcalEventTitle(e.target.value)}
+                    placeholder="E.g., Client Onboarding Sync or Team Standup"
+                    className="w-full px-6 py-4 bg-sb-cream border-2 border-transparent focus:bg-white focus:border-emerald-500 rounded-[8px] text-[1.3rem] font-medium transition-all outline-none"
+                    required
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="space-y-3">
+                  <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
+                    Description Context
+                  </label>
+                  <textarea 
+                    value={gcalEventDesc}
+                    onChange={(e) => setGcalEventDesc(e.target.value)}
+                    placeholder="Enter details, Zoom links, or meeting notes..."
+                    rows={3}
+                    className="w-full px-6 py-4 bg-sb-cream border-2 border-transparent focus:bg-white focus:border-emerald-500 rounded-[8px] text-[1.3rem] font-medium transition-all outline-none"
+                  />
+                </div>
+
+                {/* Date & Times */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  
+                  {/* Date selection */}
+                  <div className="space-y-3">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
+                      Event Date
+                    </label>
+                    <input 
+                      type="date"
+                      value={gcalEventDate}
+                      onChange={(e) => setGcalEventDate(e.target.value)}
+                      className="w-full px-6 py-4 bg-sb-cream border-2 border-transparent rounded-[8px] text-[1.3rem] font-bold focus:bg-white focus:border-emerald-500 outline-none transition-all"
+                      required
+                    />
+                  </div>
+
+                  {/* Start time */}
+                  <div className="space-y-3">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
+                      Start Time
+                    </label>
+                    <input 
+                      type="time"
+                      value={gcalEventStartTime}
+                      onChange={(e) => setGcalEventStartTime(e.target.value)}
+                      className="w-full px-6 py-4 bg-sb-cream border-2 border-transparent rounded-[8px] text-[1.3rem] font-bold focus:bg-white focus:border-emerald-500 outline-none transition-all"
+                      required
+                    />
+                  </div>
+
+                  {/* End time */}
+                  <div className="space-y-3">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
+                      End Time
+                    </label>
+                    <input 
+                      type="time"
+                      value={gcalEventEndTime}
+                      onChange={(e) => setGcalEventEndTime(e.target.value)}
+                      className="w-full px-6 py-4 bg-sb-cream border-2 border-transparent rounded-[8px] text-[1.3rem] font-bold focus:bg-white focus:border-emerald-500 outline-none transition-all"
+                      required
+                    />
+                  </div>
+
+                </div>
+
+                {/* Form Buttons */}
+                <div className="pt-6 border-t border-black/5 flex justify-end gap-4 shrink-0">
+                  <button 
+                    type="button" 
+                    onClick={() => setIsGcalEventModalOpen(false)}
+                    className="px-8 py-4 border border-black/10 rounded-full text-black/60 font-bold text-[1.3rem] uppercase tracking-wider hover:bg-sb-cream transition-all cursor-pointer bg-white"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isCreatingGcalEvent}
+                    className="px-10 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-black text-[1.3rem] uppercase tracking-widest shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer border-0"
+                  >
+                    {isCreatingGcalEvent ? "Saving..." : <Check size={16} />}
+                    Create Event
+                  </button>
+                </div>
+
+              </form>
+
+            </div>
+          </div>
+        )}
+
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm overflow-y-auto">
             <div className="bg-white rounded-[16px] sb-shadow-frap w-full max-w-[65rem] overflow-hidden my-auto flex flex-col max-h-[85vh]">
@@ -1064,13 +1452,33 @@ export default function Calendar() {
                 {/* Form Buttons */}
                 <div className="pt-6 border-t border-black/5 flex flex-col sm:flex-row justify-between gap-4">
                   {editingPost ? (
-                    <button 
-                      type="button" 
-                      onClick={() => handlePostDelete(editingPost.id)}
-                      className="px-8 py-4 border border-red-200 text-red-600 hover:bg-red-50 rounded-full font-bold text-[1.3rem] uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
-                    >
-                      <Trash2 size={14} /> Cancel Schedule
-                    </button>
+                    <div className="flex flex-wrap gap-4">
+                      <button 
+                        type="button" 
+                        onClick={() => handlePostDelete(editingPost.id)}
+                        className="px-8 py-4 border border-red-200 text-red-600 hover:bg-red-50 rounded-full font-bold text-[1.3rem] uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Trash2 size={14} /> Cancel Schedule
+                      </button>
+
+                      {accessToken && (
+                        <button 
+                          type="button" 
+                          disabled={postGcalSyncingMap[editingPost.id] === 'syncing' || postGcalSyncingMap[editingPost.id] === 'synced'}
+                          onClick={() => handleSyncPostToGcal(editingPost)}
+                          className={cn(
+                            "px-8 py-4 border rounded-full font-bold text-[1.3rem] uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer",
+                            postGcalSyncingMap[editingPost.id] === 'synced'
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                          )}
+                        >
+                          <CalendarIcon size={14} className={cn(postGcalSyncingMap[editingPost.id] === 'syncing' && "animate-spin")} />
+                          {postGcalSyncingMap[editingPost.id] === 'syncing' ? "Syncing..." : 
+                           postGcalSyncingMap[editingPost.id] === 'synced' ? "Synced in GCal ✓" : "Sync GCal"}
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div />
                   )}
