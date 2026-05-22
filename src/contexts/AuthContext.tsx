@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, User, signInWithPopup, signOut } from "firebase/auth";
-import { auth, googleProvider, db, handleFirestoreError, OperationType } from "../lib/firebase";
+import { useAuth0, User as Auth0User } from "@auth0/auth0-react";
+import { db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { UserProfile } from "../types";
 
 interface AuthContextType {
-  user: User | null;
+  user: Auth0User | null;
   profile: UserProfile | null;
   loading: boolean;
   signIn: () => Promise<{ isNewUser: boolean }>;
@@ -16,11 +16,19 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const {
+    user: auth0User,
+    isLoading,
+    isAuthenticated,
+    loginWithRedirect,
+    logout: auth0Logout,
+  } = useAuth0();
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const fetchProfile = async (uid: string) => {
+    setProfileLoading(true);
     try {
       const userRef = doc(db, "users", uid);
       const userSnap = await getDoc(userRef);
@@ -30,64 +38,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
       }
     } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `users/${uid}`);
+      handleFirestoreError(error, OperationType.GET, `users/${uid}`, uid);
+    } finally {
+      setProfileLoading(false);
     }
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        await fetchProfile(user.uid);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
+    if (isLoading) return;
+
+    if (isAuthenticated && auth0User?.sub) {
+      const uid = auth0User.sub;
+      const initOrFetchProfile = async () => {
+        setProfileLoading(true);
+        try {
+          const userRef = doc(db, "users", uid);
+          const userSnap = await getDoc(userRef);
+          if (!userSnap.exists()) {
+            const newProfile: Partial<UserProfile> = {
+              email: auth0User.email || "",
+              name: auth0User.name || "New User",
+              plan: "starter",
+              subscriptionStatus: "inactive",
+              onboardingComplete: false,
+              createdAt: new Date().toISOString(),
+            };
+            await setDoc(userRef, newProfile);
+            setProfile({ id: uid, ...newProfile } as UserProfile);
+          } else {
+            setProfile({ id: uid, ...userSnap.data() } as UserProfile);
+          }
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, `users/${uid}`, uid);
+        } finally {
+          setProfileLoading(false);
+        }
+      };
+      initOrFetchProfile();
+    } else {
+      setProfile(null);
+    }
+  }, [isLoading, isAuthenticated, auth0User?.sub]);
 
   const signIn = async (): Promise<{ isNewUser: boolean }> => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const firebaseUser = result.user;
-      setUser(firebaseUser); // Update immediately to prevent race conditions
-
-      // Initialize profile if not exists
-      const userRef = doc(db, "users", firebaseUser.uid);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) {
-        const newProfile: Partial<UserProfile> = {
-          email: firebaseUser.email || "",
-          name: firebaseUser.displayName || "New User",
-          plan: 'starter',
-          subscriptionStatus: 'inactive',
-          onboardingComplete: false,
-          createdAt: new Date().toISOString(),
-        };
-        await setDoc(userRef, newProfile);
-        setProfile({ id: firebaseUser.uid, ...newProfile } as UserProfile);
-        return { isNewUser: true };
-      } else {
-        setProfile({ id: firebaseUser.uid, ...userSnap.data() } as UserProfile);
-        return { isNewUser: false };
-      }
-    } catch (error) {
-      console.error("Login failed", error);
-      return { isNewUser: false };
-    }
+    await loginWithRedirect();
+    return { isNewUser: false };
   };
 
   const logout = async () => {
-    await signOut(auth);
+    auth0Logout({ logoutParams: { returnTo: window.location.origin } });
   };
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.uid);
+    if (auth0User?.sub) await fetchProfile(auth0User.sub);
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, logout, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        user: auth0User ?? null,
+        profile,
+        loading: isLoading || profileLoading,
+        signIn,
+        logout,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
