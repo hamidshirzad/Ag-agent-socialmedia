@@ -1,11 +1,13 @@
 import tracer from 'dd-trace';
 
+const isServer = typeof process !== 'undefined' && process.env;
+
 // Docker/local dev: DD_TRACE_AGENT_URL=unix:///var/run/datadog/apm.socket
 // Vercel (serverless): leave DD_TRACE_AGENT_URL unset; use DD_API_KEY for agentless mode
-const agentUrl = process.env.DD_TRACE_AGENT_URL?.trim();
-const apiKey   = process.env.DD_API_KEY?.trim();
+const agentUrl = isServer ? process.env.DD_TRACE_AGENT_URL?.trim() : undefined;
+const apiKey   = isServer ? process.env.DD_API_KEY?.trim() : undefined;
 
-if (agentUrl || apiKey) {
+if (isServer && (agentUrl || apiKey)) {
   tracer.init({
     service: process.env.DD_SERVICE ?? 'fourdoorai',
     env:     process.env.DD_ENV     ?? process.env.NODE_ENV ?? 'production',
@@ -20,4 +22,4 @@ if (agentUrl || apiKey) {
 }
 
 export default tracer;
-export const LLMObs: typeof tracer.llmobs = tracer.llmobs;
+export const LLMObs: typeof tracer.llmobs = isServer ? tracer.llmobs : null;
