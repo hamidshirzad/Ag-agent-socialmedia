@@ -192,10 +192,15 @@ export default function Calendar() {
   }, [accessToken, currentDate, setAccessToken]);
 
   const handleConnectGcal = async () => {
+    setGcalError(null);
     try {
-      await signIn();
-    } catch (err) {
+      const res = await signIn();
+      if (!res.success && res.error) {
+        setGcalError(res.error);
+      }
+    } catch (err: any) {
       console.error("Failed to authenticate Google Calendar:", err);
+      setGcalError(err.message || "Failed to authenticate Google Calendar.");
     }
   };
 

@@ -13,14 +13,20 @@ export default function Landing() {
   // Stats counters
   const [stats, setStats] = useState({ lightYears: 0, galaxies: 0, stars: 0 });
   const [coords, setCoords] = useState("RA 00h 00m 00s · DEC +00° 00' 00\"");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleStart = async () => {
     if (loading) return;
+    setErrorMsg(null);
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
     } else {
-      const { isNewUser } = await signIn();
-      navigate(isNewUser ? "/onboarding" : "/dashboard");
+      const res = await signIn();
+      if (res && res.success) {
+        navigate(res.isNewUser ? "/onboarding" : "/dashboard");
+      } else if (res && res.error) {
+        setErrorMsg(res.error);
+      }
     }
   };
 
@@ -365,6 +371,56 @@ export default function Landing() {
       >
         {coords}
       </motion.div>
+
+      {/* Error Terminal Dialog */}
+      <AnimatePresence>
+        {errorMsg && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/85 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#040924] border-2 border-[#ff3b3b]/60 rounded-lg p-8 max-w-[500px] w-full shadow-[0_0_50px_rgba(255,59,59,0.3)] text-[#e8f4ff] relative"
+            >
+              <h3 className="font-['Orbitron'] text-lg font-bold tracking-[0.25em] text-[#ff3b3b] uppercase mb-4 flex items-center gap-3">
+                ⚠️ TRANSMISSION FAILURE
+              </h3>
+              
+              <div className="text-[0.9rem] leading-[1.6] tracking-wide text-[#e8f4ff]/80 mb-6 space-y-4 font-sans">
+                <p>{errorMsg}</p>
+                
+                <div className="p-4 bg-red-950/40 border border-[#ff3b3b]/20 rounded text-[0.8rem] font-mono text-[#ff8080]">
+                  <span className="font-bold text-white uppercase block mb-1">Diagnosis:</span>
+                  The Google AI Studio container runs inside a sandboxed cross-origin iframe. If your browser blocks popups or restricts third-party storage, sign-in flows will be blocked.
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 font-sans">
+                <button
+                  onClick={() => {
+                    window.open(window.location.href, "_blank");
+                  }}
+                  className="w-full font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-5 py-3 rounded bg-[linear-gradient(135deg,#ff3b3b,#ff8080)] text-black hover:shadow-[0_0_20px_rgba(255,59,59,0.5)] transition-all cursor-pointer text-center"
+                >
+                  🚀 Launch in New Tab (Recommended)
+                </button>
+                
+                <button
+                  onClick={() => setErrorMsg(null)}
+                  className="w-full font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-5 py-3 rounded border border-white/20 hover:bg-white/5 transition-all cursor-pointer text-center text-white/75"
+                >
+                  Dismiss Alert
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Orb Pulse Keyframes */}
       <style>{`

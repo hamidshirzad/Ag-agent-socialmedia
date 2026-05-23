@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
-  signIn: () => Promise<{ isNewUser: boolean }>;
+  signIn: () => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   accessToken: string | null;
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const signIn = async (): Promise<{ isNewUser: boolean }> => {
+  const signIn = async (): Promise<{ success: boolean; isNewUser?: boolean; error?: string }> => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
@@ -77,14 +77,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         await setDoc(userRef, newProfile);
         setProfile({ id: firebaseUser.uid, ...newProfile } as UserProfile);
-        return { isNewUser: true };
+        return { success: true, isNewUser: true };
       } else {
         setProfile({ id: firebaseUser.uid, ...userSnap.data() } as UserProfile);
-        return { isNewUser: false };
+        return { success: true, isNewUser: false };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
-      return { isNewUser: false };
+      
+      let friendlyMessage = "Failed to sign in. Please try again.";
+      if (error && typeof error === "object") {
+        const code = error.code || "";
+        const message = error.message || "";
+        
+        if (code === "auth/popup-closed-by-user" || message.includes("popup-closed-by-user")) {
+          friendlyMessage = "The login popup was closed before completion. This app runs inside an iframe (the AI Studio preview), which restricts/blocks popups. To login successfully, please allow popups in your browser settings, or open this page in a new tab using the top-right menu for a seamless experience.";
+        } else if (code === "auth/popup-blocked" || message.includes("popup-blocked")) {
+          friendlyMessage = "The browser blocked the login popup. Please enable popups for this site, or open this application in a new tab.";
+        } else if (code === "auth/operation-not-allowed" || message.includes("operation-not-allowed")) {
+          friendlyMessage = "Google sign-in is not enabled on this Firebase project. Please enable Google provider under Authentication in your Firebase console.";
+        } else if (code === "auth/unauthorized-domain" || message.includes("unauthorized-domain")) {
+          friendlyMessage = "This domain is not authorized for OAuth in Firebase. Please add this preview domain to Authorized domains in your Firebase console settings.";
+        } else if (message) {
+          friendlyMessage = `Authentication error: ${message}`;
+        }
+      }
+      return { success: false, error: friendlyMessage };
     }
   };
 
