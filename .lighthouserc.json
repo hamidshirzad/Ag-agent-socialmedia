@@ -1,7 +1,10 @@
 {
   "ci": {
     "collect": {
-      "url": ["https://lively-basbousa-833c9e.netlify.app/"],
+      "url": [
+        "https://lively-basbousa-833c9e.netlify.app/",
+        "https://ag-agent-socialmedia-jipx.vercel.app/"
+      ],
       "numberOfRuns": 5,
       "settings": {
         "preset": "desktop"

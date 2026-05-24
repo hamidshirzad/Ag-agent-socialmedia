@@ -16,3 +16,6 @@ infra/terraform.tfstate
 infra/terraform.tfstate.backup
 infra/terraform.tfvars
 lighthouse-reports/
+
+.vercel
+!.vercel/project.json
