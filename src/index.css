@@ -52,10 +52,12 @@
 @layer base {
   html {
     font-size: 62.5%; /* 1rem = 10px */
+    overflow-x: clip;
     @apply antialiased;
   }
 
   body {
+    overflow-x: clip;
     @apply bg-sb-cream text-black/87 font-sans text-[1.6rem] leading-relaxed tracking-sb;
   }
 
