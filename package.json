@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lhci": "lhci autorun"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
@@ -37,6 +38,7 @@
     "vite": "^6.2.3"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.15.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
