@@ -282,13 +282,18 @@ export default function Landing() {
               Autonomous marketing for the next generation of builders.
             </p>
             <div className="flex gap-3">
-              {[Twitter, Instagram, Linkedin, Youtube].map((Icon, i) => (
-                <a key={i} href="#"
+              {[
+                { Icon: Twitter, label: "Follow us on X (Twitter)" },
+                { Icon: Instagram, label: "Follow us on Instagram" },
+                { Icon: Linkedin, label: "Connect on LinkedIn" },
+                { Icon: Youtube, label: "Watch on YouTube" },
+              ].map(({ Icon, label }) => (
+                <a key={label} href="#" aria-label={label}
                   className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
                   style={{ background: "var(--color-el-surface-strong)" }}
                   onMouseOver={e => (e.currentTarget.style.background = "var(--color-el-hairline)")}
                   onMouseOut={e => (e.currentTarget.style.background = "var(--color-el-surface-strong)")}>
-                  <Icon size={14} style={{ color: "var(--color-el-muted)" }} />
+                  <Icon size={14} style={{ color: "var(--color-el-muted)" }} aria-hidden="true" />
                 </a>
               ))}
             </div>
@@ -321,8 +326,8 @@ export default function Landing() {
 
         <div className="max-w-[1200px] mx-auto mt-16 pt-8 flex flex-col md:flex-row justify-between items-center gap-4"
           style={{ borderTop: "1px solid var(--color-el-hairline)" }}>
-          <p className="text-[1.3rem]" style={{ color: "var(--color-el-muted-soft)" }}>© 2026 Fourdoor AI. All rights reserved.</p>
-          <p className="text-[1.3rem]" style={{ color: "var(--color-el-muted-soft)" }}>Built for autonomous growth.</p>
+          <p className="text-[1.3rem]" style={{ color: "var(--color-el-muted)" }}>© 2026 Fourdoor AI. All rights reserved.</p>
+          <p className="text-[1.3rem]" style={{ color: "var(--color-el-muted)" }}>Built for autonomous growth.</p>
         </div>
       </footer>
     </div>
