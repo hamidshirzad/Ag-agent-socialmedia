@@ -283,7 +283,7 @@ export default function Dashboard() {
             <div className="flex-1">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-[1.2rem] uppercase tracking-widest font-black text-sb-green">Real-time Predictor Feedback</span>
-                <button onClick={() => setAiInsightResult(null)} className="text-[1.1rem] font-bold text-black/40 hover:text-black uppercase tracking-widest">dismiss</button>
+                <button onClick={() => setAiInsightResult(null)} className="text-[1.2rem] font-bold text-black/40 hover:text-black uppercase tracking-widest">dismiss</button>
               </div>
               <p className="text-[1.35rem] text-sb-house font-semibold leading-relaxed font-serif italic">"{aiInsightResult}"</p>
             </div>
@@ -310,7 +310,7 @@ export default function Dashboard() {
                 <span className="text-[1.2rem] opacity-70 font-semibold bg-white/5 border border-white/10 px-4 py-2 rounded-[8px] uppercase tracking-widest">
                   Active Model: {profile?.apiKeys?.anthropic ? 'Claude 3.5 Sonnet' : profile?.apiKeys?.openai ? 'GPT-4o' : 'Gemini 1.5 Flash'}
                 </span>
-                <span className="text-[1.1rem] text-sb-gold/80 font-black uppercase tracking-widest border border-sb-gold/20 px-4 py-2 rounded-[8px]">
+                <span className="text-[1.2rem] text-sb-gold/80 font-black uppercase tracking-widest border border-sb-gold/20 px-4 py-2 rounded-[8px]">
                   DB Status: Linked 
                 </span>
               </div>
@@ -318,14 +318,14 @@ export default function Dashboard() {
             
             <div className="flex items-center gap-6 shrink-0 relative z-10 bg-white/5 p-6 rounded-[12px] border border-white/10">
               <div>
-                <p className="text-[1.1rem] opacity-50 uppercase tracking-widest">Campaign Token Rate</p>
+                <p className="text-[1.2rem] opacity-50 uppercase tracking-widest">Campaign Token Rate</p>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-[3rem] font-bold text-sb-gold">42%</span>
                   <span className="text-[1.2rem] opacity-70">consumed</span>
                 </div>
                 <button 
                   onClick={() => navigate('/settings')}
-                  className="mt-4 w-full px-6 py-3 bg-white hover:bg-white/90 text-sb-house rounded-full text-[1.1rem] font-black uppercase tracking-widest transition-all sb-button-active text-center"
+                  className="mt-4 w-full px-6 py-3 bg-white hover:bg-white/90 text-sb-house rounded-full text-[1.2rem] font-black uppercase tracking-widest transition-all sb-button-active text-center"
                 >
                   Adjust Keys
                 </button>
@@ -437,7 +437,7 @@ export default function Dashboard() {
                       key={id}
                       onClick={() => setTimeframe(id)}
                       className={cn(
-                        "px-6 py-2 rounded-full text-[1.1rem] font-bold uppercase tracking-widest transition-all cursor-pointer",
+                        "px-6 py-2 rounded-full text-[1.2rem] font-bold uppercase tracking-widest transition-all cursor-pointer",
                         timeframe === id ? "bg-sb-house text-white" : "text-black/50 hover:text-black"
                       )}
                     >
@@ -449,7 +449,7 @@ export default function Dashboard() {
 
               {/* Metric Multi-Selectors */}
               <div className="flex flex-wrap items-center gap-4 mb-8 bg-sb-cream/40 p-4 rounded-[8px] border border-black/5">
-                <span className="text-[1.1rem] uppercase tracking-widest font-black text-black/30 mr-2">Plot Lines:</span>
+                <span className="text-[1.2rem] uppercase tracking-widest font-black text-black/30 mr-2">Plot Lines:</span>
                 {[
                   { key: 'outbounds', label: 'Outbound Count', color: '#006241' },
                   { key: 'replies', label: 'Replies Captured', color: '#1E3932' },
@@ -461,7 +461,7 @@ export default function Dashboard() {
                     key={m.key}
                     onClick={() => toggleMetric(m.key)}
                     className={cn(
-                      "px-4 py-2 rounded-full text-[1.1rem] font-bold uppercase tracking-widest border transition-all flex items-center gap-2 cursor-pointer",
+                      "px-4 py-2 rounded-full text-[1.2rem] font-bold uppercase tracking-widest border transition-all flex items-center gap-2 cursor-pointer",
                       visibleMetrics[m.key] 
                         ? "bg-white text-black text-sb-green shadow-sm" 
                         : "border-transparent text-black/40 hover:text-black/70"
@@ -739,7 +739,7 @@ export default function Dashboard() {
               <div className="bg-sb-cream/40 p-6 rounded-[12px] border border-black/5 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-4 pb-2 border-b border-black/5">
-                    <span className="text-[1.1rem] font-black uppercase tracking-widest text-sb-green">Channel Inspector</span>
+                    <span className="text-[1.2rem] font-black uppercase tracking-widest text-sb-green">Channel Inspector</span>
                     <span className="text-[1.05rem] font-bold text-black/35">Interactive</span>
                   </div>
                   
@@ -780,7 +780,7 @@ export default function Dashboard() {
 
                 <button 
                   onClick={() => navigate('/content')}
-                  className="mt-6 w-full py-3 bg-sb-house hover:bg-sb-green text-white text-[1.1rem] font-black uppercase tracking-widest rounded-full transition-all text-center sb-button-active cursor-pointer"
+                  className="mt-6 w-full py-3 bg-sb-house hover:bg-sb-green text-white text-[1.2rem] font-black uppercase tracking-widest rounded-full transition-all text-center sb-button-active cursor-pointer"
                 >
                   Tune Channel Script
                 </button>
@@ -895,7 +895,7 @@ export default function Dashboard() {
               ))}
               <button 
                 onClick={() => navigate('/campaigns')}
-                className="w-full mt-4 text-[1.1rem] py-2 bg-transparent text-sb-green border border-sb-green/20 rounded-full font-black uppercase tracking-widest hover:bg-sb-cream/50 transition-all text-center cursor-pointer block"
+                className="w-full mt-4 text-[1.2rem] py-2 bg-transparent text-sb-green border border-sb-green/20 rounded-full font-black uppercase tracking-widest hover:bg-sb-cream/50 transition-all text-center cursor-pointer block"
               >
                 Edit Active Objectives
               </button>
@@ -915,7 +915,7 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-2.5 h-2.5 rounded-full bg-sb-accent animate-pulse shadow-[0_0_8px_#00754A]" />
-                <span className="text-[1.1rem] uppercase font-black tracking-widest text-sb-house">Realtime Feed</span>
+                <span className="text-[1.2rem] uppercase font-black tracking-widest text-sb-house">Realtime Feed</span>
               </div>
             </div>
             
@@ -1061,7 +1061,7 @@ export default function Dashboard() {
                 </div>
                 <button 
                   onClick={() => navigate('/campaigns')}
-                  className="w-full py-4 text-[1.1rem] font-black uppercase tracking-widest text-sb-green/60 hover:text-sb-green transition-all text-center cursor-pointer"
+                  className="w-full py-4 text-[1.2rem] font-black uppercase tracking-widest text-sb-green/60 hover:text-sb-green transition-all text-center cursor-pointer"
                 >
                   Manage All Objectives
                 </button>
@@ -1121,7 +1121,7 @@ export default function Dashboard() {
                           key={platform.id}
                           onClick={() => setShareData(prev => prev ? { ...prev, targetPlatform: platform.id } : null)}
                           className={cn(
-                            "py-4 px-3 rounded-[12px] border flex flex-col items-center gap-2 transition-all cursor-pointer font-bold text-[1.1rem]",
+                            "py-4 px-3 rounded-[12px] border flex flex-col items-center gap-2 transition-all cursor-pointer font-bold text-[1.2rem]",
                             isActive 
                               ? platform.activeColor 
                               : "border-black/5 bg-sb-cream hover:bg-neutral-100 text-neutral-600"

@@ -460,7 +460,7 @@ export default function ContentEngine() {
                     </div>
                     Archived Library
                   </h2>
-                  <span className="text-[1.1rem] bg-sb-gold/20 text-sb-house border border-sb-gold/20 font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
+                  <span className="text-[1.2rem] bg-sb-gold/20 text-sb-house border border-sb-gold/20 font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
                     {libraryPosts.length} drafts
                   </span>
                 </div>
@@ -515,7 +515,7 @@ export default function ContentEngine() {
                       <div className="py-24 text-center border-2 border-dashed border-sb-house/5 rounded-[12px] bg-sb-cream/20">
                         <BookOpen size={36} className="text-sb-green/10 mx-auto mb-4" />
                         <p className="text-[1.4rem] text-sb-green/50 font-bold uppercase tracking-wider">No Drafts Found</p>
-                        <p className="text-[1.1rem] text-black/30 mt-2">Generate content and click "Save to Library" to build your backlog.</p>
+                        <p className="text-[1.2rem] text-black/30 mt-2">Generate content and click "Save to Library" to build your backlog.</p>
                       </div>
                     );
                   }
@@ -582,14 +582,14 @@ export default function ContentEngine() {
                               <button
                                 type="button"
                                 onClick={() => handleCopyText(draft.caption)}
-                                className="py-3 bg-white hover:bg-black/5 text-sb-green border border-black/5 rounded-full text-[1.1rem] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                className="py-3 bg-white hover:bg-black/5 text-sb-green border border-black/5 rounded-full text-[1.2rem] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer"
                               >
                                 <Copy size={12} /> Copy Draft
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleLoadDraftToWorkspace(draft)}
-                                className="py-3 bg-sb-house text-white rounded-full text-[1.1rem] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-sb-green hover:shadow-md cursor-pointer"
+                                className="py-3 bg-sb-house text-white rounded-full text-[1.2rem] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-sb-green hover:shadow-md cursor-pointer"
                               >
                                 <Edit3 size={12} /> Workspace
                               </button>
@@ -671,7 +671,7 @@ export default function ContentEngine() {
                           type="button"
                           onClick={() => setEngine(eng.id as any)}
                           className={cn(
-                            "py-4 rounded-[12px] text-[1.1rem] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-2 cursor-pointer",
+                            "py-4 rounded-[12px] text-[1.2rem] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-2 cursor-pointer",
                             engine === eng.id ? "bg-sb-house text-white border-sb-house" : "bg-sb-cream text-sb-green/40 border-transparent hover:border-sb-green/10"
                           )}
                         >
@@ -812,7 +812,7 @@ export default function ContentEngine() {
                           type="button"
                           onClick={() => setEngine(eng.id as any)}
                           className={cn(
-                            "py-4 rounded-[12px] text-[1.1rem] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-2 cursor-pointer",
+                            "py-4 rounded-[12px] text-[1.2rem] font-black uppercase tracking-widest border-2 transition-all flex flex-col items-center gap-2 cursor-pointer",
                             engine === eng.id ? "bg-sb-house text-white border-sb-house" : "bg-sb-cream text-sb-green/40 border-transparent hover:border-sb-green/10"
                           )}
                         >
@@ -930,7 +930,7 @@ export default function ContentEngine() {
                     <Brain className="text-sb-house" size={20} />
                   </div>
                   <div className="space-y-2">
-                    <p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-gold">Co-pilot Strategist</p>
+                    <p className="text-[1.2rem] font-black uppercase tracking-widest text-sb-gold">Co-pilot Strategist</p>
                     <p className="text-[1.4rem] font-medium leading-relaxed opacity-95">
                       "{brainstormResponse.assistantIntroduction}"
                     </p>
@@ -990,7 +990,7 @@ export default function ContentEngine() {
                           disabled={isIdeaConverting}
                           onClick={() => handleConvertIdeaToFormats(idea)}
                           className={cn(
-                            "w-full py-4 text-[1.1rem] font-black uppercase tracking-wider rounded-[8px] flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer",
+                            "w-full py-4 text-[1.2rem] font-black uppercase tracking-wider rounded-[8px] flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer",
                             selectedIdeaId === idea.id ? "bg-sb-gold/10 text-sb-gold" : "bg-sb-cream hover:bg-sb-house hover:text-white hover:border-sb-house text-sb-green"
                           )}
                         >
@@ -1028,7 +1028,7 @@ export default function ContentEngine() {
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-sb-gold" />
                     <div className="flex justify-between items-center mb-10 pb-6 border-b border-white/10">
                       <h3 className="text-[2.1rem] font-bold uppercase tracking-sb">Neural Payload</h3>
-                      <span className="text-[1.1rem] bg-sb-gold text-sb-house px-4 py-1.5 rounded-full font-black tracking-widest shadow-lg">STABLE</span>
+                      <span className="text-[1.2rem] bg-sb-gold text-sb-house px-4 py-1.5 rounded-full font-black tracking-widest shadow-lg">STABLE</span>
                     </div>
 
                     <div className="space-y-10">
@@ -1078,7 +1078,7 @@ export default function ContentEngine() {
                           <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-4">
-                                <p className="text-[1.1rem] font-black uppercase tracking-widest text-white/40">Base Visual</p>
+                                <p className="text-[1.2rem] font-black uppercase tracking-widest text-white/40">Base Visual</p>
                                 <div className="relative group rounded-[12px] overflow-hidden border border-white/10 aspect-video bg-sb-cream/5 shadow-inner">
                                   <img 
                                     src={`https://image.pollinations.ai/prompt/${encodeURIComponent(result.suggestedImagePrompt)}?width=1280&height=720&seed=${result.imageSeed || 42}&nologo=true`}
@@ -1087,13 +1087,13 @@ export default function ContentEngine() {
                                     referrerPolicy="no-referrer"
                                   />
                                   <div className="absolute inset-0 bg-gradient-to-t from-sb-house/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-8">
-                                    <p className="text-[1.1rem] text-white/60 italic font-medium">"{result.suggestedImagePrompt}"</p>
+                                    <p className="text-[1.2rem] text-white/60 italic font-medium">"{result.suggestedImagePrompt}"</p>
                                   </div>
                                 </div>
                               </div>
 
                               <div className="space-y-4">
-                                <p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-gold">Veo Video synthesis</p>
+                                <p className="text-[1.2rem] font-black uppercase tracking-widest text-sb-gold">Veo Video synthesis</p>
                                 <div className="relative group rounded-[12px] overflow-hidden border border-white/10 aspect-video bg-sb-cream/5 shadow-inner flex items-center justify-center">
                                   {generatedVideoUrl ? (
                                     <video 
@@ -1114,7 +1114,7 @@ export default function ContentEngine() {
                                       <Video size={40} className="text-white/10" />
                                       <button 
                                         onClick={handleGenerateVideo}
-                                        className="px-8 py-4 bg-sb-gold text-sb-house rounded-full text-[1.1rem] font-black uppercase tracking-widest hover:shadow-lg transition-all flex items-center gap-3 animate-pulse border-2 border-sb-gold/20"
+                                        className="px-8 py-4 bg-sb-gold text-sb-house rounded-full text-[1.2rem] font-black uppercase tracking-widest hover:shadow-lg transition-all flex items-center gap-3 animate-pulse border-2 border-sb-gold/20"
                                       >
                                         <Play size={14} className="fill-current" /> Generate Veo Video
                                       </button>
@@ -1127,7 +1127,7 @@ export default function ContentEngine() {
                             <div className="flex gap-4">
                               <button 
                                 onClick={() => setResult({...result, imageSeed: Math.floor(Math.random() * 1000000)})}
-                                className="flex-1 py-4 bg-white/5 border border-white/10 rounded-full text-[1.1rem] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3"
+                                className="flex-1 py-4 bg-white/5 border border-white/10 rounded-full text-[1.2rem] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3"
                               >
                                 <RotateCcw size={14} /> Regenerate All
                               </button>
@@ -1153,10 +1153,10 @@ export default function ContentEngine() {
                         </div>
                        
                        <div className="pt-8 border-t border-white/5">
-                          <p className="text-[1.1rem] font-black uppercase tracking-widest mb-6 text-sb-gold opacity-80">Optimized Signals</p>
+                          <p className="text-[1.2rem] font-black uppercase tracking-widest mb-6 text-sb-gold opacity-80">Optimized Signals</p>
                           <div className="flex flex-wrap gap-3">
                              {result.hashtags?.map((tag: string) => (
-                               <span key={tag} className="text-[1.1rem] px-5 py-2 bg-white/5 rounded-full border border-white/10 font-bold hover:bg-white/10 transition-colors">#{tag}</span>
+                               <span key={tag} className="text-[1.2rem] px-5 py-2 bg-white/5 rounded-full border border-white/10 font-bold hover:bg-white/10 transition-colors">#{tag}</span>
                              ))}
                           </div>
                        </div>
@@ -1193,7 +1193,7 @@ export default function ContentEngine() {
                             </div>
 
                             <div className="group">
-                              <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2 flex items-center gap-2">
+                              <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2 flex items-center gap-2">
                                 <Clock size={12} /> Schedule Deployment
                               </label>
                               <input 
@@ -1208,7 +1208,7 @@ export default function ContentEngine() {
                               <label className="flex items-center justify-between p-4 bg-white/5 rounded-[12px] border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
                                 <div className="flex items-center gap-3">
                                   <Brain size={16} className={cn(agentEngagement ? "text-sb-gold" : "text-white/20")} />
-                                  <span className="text-[1.1rem] font-black uppercase tracking-widest text-white/80">AI Agent Engagement</span>
+                                  <span className="text-[1.2rem] font-black uppercase tracking-widest text-white/80">AI Agent Engagement</span>
                                 </div>
                                 <input 
                                   type="checkbox" 
@@ -1220,7 +1220,7 @@ export default function ContentEngine() {
                               <label className="flex items-center justify-between p-4 bg-white/5 rounded-[12px] border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
                                 <div className="flex items-center gap-3">
                                   <RotateCcw size={16} className={cn(autoReply ? "text-sb-gold" : "text-white/20")} />
-                                  <span className="text-[1.1rem] font-black uppercase tracking-widest text-white/80">Neural Auto-Reply</span>
+                                  <span className="text-[1.2rem] font-black uppercase tracking-widest text-white/80">Neural Auto-Reply</span>
                                 </div>
                                 <input 
                                   type="checkbox" 
@@ -1344,7 +1344,7 @@ function ContentBlock({
           </div>
           <div>
             <h4 className="text-[1.4rem] font-black uppercase tracking-widest text-white">{title}</h4>
-            <div className="flex items-center gap-2 mt-1 opacity-40 text-[1.1rem] font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-2 mt-1 opacity-40 text-[1.2rem] font-bold uppercase tracking-widest">
               <span>{charCount} characters</span>
               <span>•</span>
               <span>{wordCount} words</span>
@@ -1373,7 +1373,7 @@ function ContentBlock({
           type="button"
           onClick={handleCopy}
           className={cn(
-            "flex-1 py-4 text-[1.1rem] font-black uppercase tracking-widest rounded-full flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer border",
+            "flex-1 py-4 text-[1.2rem] font-black uppercase tracking-widest rounded-full flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer border",
             copied 
               ? "bg-sb-gold/20 border-sb-gold text-sb-gold" 
               : "bg-white/5 border-white/10 hover:bg-white/10 text-white hover:border-white/20 active:scale-[0.97]"
@@ -1387,7 +1387,7 @@ function ContentBlock({
           type="button"
           onClick={handleUse}
           className={cn(
-            "flex-1 py-4 text-[1.1rem] font-black uppercase tracking-widest rounded-full flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer border",
+            "flex-1 py-4 text-[1.2rem] font-black uppercase tracking-widest rounded-full flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer border",
             isSelected 
               ? "bg-sb-gold text-sb-house border-sb-gold shadow-lg shadow-sb-gold/10 hover:bg-sb-gold/90 active:scale-[0.97]" 
               : "bg-white/5 border-white/10 hover:bg-white/10 text-white hover:border-white/20 active:scale-[0.97]"

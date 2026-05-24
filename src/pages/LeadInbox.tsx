@@ -137,7 +137,7 @@ export default function LeadInbox() {
                 >
                   <div className="flex justify-between items-start mb-3">
                     <h3 className="font-bold text-[1.6rem] text-sb-green group-hover:text-sb-accent transition-colors">{lead.name}</h3>
-                    <span className="text-[1.1rem] font-black bg-sb-house text-sb-gold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
+                    <span className="text-[1.2rem] font-black bg-sb-house text-sb-gold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
                       {lead.score}
                     </span>
                   </div>
@@ -227,17 +227,17 @@ export default function LeadInbox() {
                                 </div>
                                 <div className="p-10 bg-white rounded-[12px] sb-shadow-card grow relative after:absolute after:left-[-10px] after:top-6 after:w-5 after:h-5 after:bg-white after:rotate-45">
                                    <p className="text-[1.6rem] leading-relaxed italic text-black/70 mb-4 tracking-sb font-medium">"{selectedLead.initialMessage}"</p>
-                                   <p className="text-[1.1rem] font-black text-sb-house/40 uppercase tracking-widest">Inbound Signal / {formatDate(selectedLead.createdAt)}</p>
+                                   <p className="text-[1.2rem] font-black text-sb-house/40 uppercase tracking-widest">Inbound Signal / {formatDate(selectedLead.createdAt)}</p>
                                 </div>
                              </div>
                              
                              <div className="flex gap-8 relative justify-end">
                                 <div className="p-10 bg-sb-house text-white rounded-[12px] sb-shadow-frap grow max-w-[48rem] relative before:absolute before:right-[-10px] before:top-6 before:w-5 before:h-5 before:bg-sb-house before:rotate-45">
                                    <p className="text-[1.6rem] leading-relaxed mb-4 font-medium tracking-sb">Hi {selectedLead.name.split(' ')[0]}, I've analyzed your request. Based on your goals, our Pro Engine could increase your reach by 4x. Would you like a guided demo?</p>
-                                   <p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-gold">AI Protocol / Auto Output</p>
+                                   <p className="text-[1.2rem] font-black uppercase tracking-widest text-sb-gold">AI Protocol / Auto Output</p>
                                 </div>
                                 <div className="w-14 h-14 rounded-full bg-sb-accent flex items-center justify-center shrink-0 shadow-lg z-10">
-                                   <Zap className="text-white w-6 h-6 fill-white" /></div></div>{calendlyStatusMap[selectedLead.id] === "sent" && (<div className="flex gap-8 relative justify-end animate-fade-in"><div className="p-10 bg-[#e6f4ea]/60 text-sb-green border border-sb-accent/20 rounded-[12px] sb-shadow-card grow max-w-[48rem] relative before:absolute before:right-[-10px] before:top-4 before:w-5 before:h-5 before:bg-[#e6f4ea]/60 before:rotate-45"><p className="text-[1.5rem] leading-relaxed mb-3 font-bold">📬 Calendly direct invitation sent!</p><p className="text-[1.3rem] leading-relaxed mb-4 font-semibold text-sb-house">"Hi {selectedLead.name.split(' ')[0]}, here is the direct booking calendar link so we can schedule some time together on our dashboard: {import.meta.env.VITE_CALENDLY_BOOKING_LINK || 'https://calendly.com/hameed-sherzad22/100'}"</p><p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-accent">Agent Outbound Dispatched</p></div><div className="w-14 h-14 rounded-full bg-sb-green flex items-center justify-center shrink-0 shadow-lg z-10 font-bold"><Calendar size={18} className="text-white" /></div></div>)}<div className="hidden"><div className="hidden">
+                                   <Zap className="text-white w-6 h-6 fill-white" /></div></div>{calendlyStatusMap[selectedLead.id] === "sent" && (<div className="flex gap-8 relative justify-end animate-fade-in"><div className="p-10 bg-[#e6f4ea]/60 text-sb-green border border-sb-accent/20 rounded-[12px] sb-shadow-card grow max-w-[48rem] relative before:absolute before:right-[-10px] before:top-4 before:w-5 before:h-5 before:bg-[#e6f4ea]/60 before:rotate-45"><p className="text-[1.5rem] leading-relaxed mb-3 font-bold">📬 Calendly direct invitation sent!</p><p className="text-[1.3rem] leading-relaxed mb-4 font-semibold text-sb-house">"Hi {selectedLead.name.split(' ')[0]}, here is the direct booking calendar link so we can schedule some time together on our dashboard: {import.meta.env.VITE_CALENDLY_BOOKING_LINK || 'https://calendly.com/hameed-sherzad22/100'}"</p><p className="text-[1.2rem] font-black uppercase tracking-widest text-sb-accent">Agent Outbound Dispatched</p></div><div className="w-14 h-14 rounded-full bg-sb-green flex items-center justify-center shrink-0 shadow-lg z-10 font-bold"><Calendar size={18} className="text-white" /></div></div>)}<div className="hidden"><div className="hidden">
                                 </div>
                              </div>
                           </div>
@@ -249,7 +249,7 @@ export default function LeadInbox() {
                           <h4 className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/30 mb-8">Neural Analysis</h4>
                           <div className="space-y-10">
                              <div>
-                                <p className="text-[1.1rem] font-black uppercase tracking-widest mb-3 text-sb-green/60">Lead Score</p>
+                                <p className="text-[1.2rem] font-black uppercase tracking-widest mb-3 text-sb-green/60">Lead Score</p>
                                 <div className="flex items-center gap-6">
                                    <div className="flex-1 h-3 bg-sb-cream rounded-full overflow-hidden">
                                       <div className="h-full bg-sb-accent shadow-[0_0_8px_#00754A]" style={{ width: `${selectedLead.score / 10}%` }} />
@@ -258,7 +258,7 @@ export default function LeadInbox() {
                                 </div>
                              </div>
                              <div>
-                                <p className="text-[1.1rem] font-black uppercase tracking-widest mb-3 text-sb-green/60">Intelligence Status</p>
+                                <p className="text-[1.2rem] font-black uppercase tracking-widest mb-3 text-sb-green/60">Intelligence Status</p>
                                 <div className="flex items-center gap-4 p-4 bg-sb-light/30 rounded-[12px] border border-sb-accent/10">
                                    <CheckCircle2 size={24} className="text-sb-accent" />
                                    <span className="text-[1.4rem] font-black uppercase tracking-tight text-sb-green">Ready for Conversion</span>

@@ -152,7 +152,7 @@ export default function Onboarding() {
         <div className="space-y-6">
           <div className="p-10 bg-sb-house text-white rounded-[32px] sb-shadow-frap relative overflow-hidden">
              <div className="absolute top-0 left-0 w-full h-1.5 bg-sb-gold" />
-             <div className="flex gap-3 items-center mb-6 opacity-60 font-black uppercase tracking-[0.2em] text-[1.1rem]">
+             <div className="flex gap-3 items-center mb-6 opacity-60 font-black uppercase tracking-[0.2em] text-[1.2rem]">
                 <Zap size={14} className="text-sb-gold fill-sb-gold" /> Neural Engine Active
              </div>
              <p className="text-[2.2rem] font-medium leading-relaxed italic text-white/90">
