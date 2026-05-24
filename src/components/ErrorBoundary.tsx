@@ -16,10 +16,51 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public static getDerivedStateFromError(error: Error): State {
+    const msg = error?.message || String(error || "");
+    if (msg.includes("ethereum") || msg.includes("Cannot redefine property")) {
+      return { hasError: false, error: null };
+    }
     return { hasError: true, error };
   }
 
+  private _cleanupListeners?: () => void;
+
+  public componentDidMount() {
+    const handleError = (event: ErrorEvent) => {
+      const msg = event?.message || "";
+      if (msg.includes("ethereum") || msg.includes("Cannot redefine property")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      const reason = event?.reason?.message || String(event?.reason || "");
+      if (reason.includes("ethereum") || reason.includes("Cannot redefine property")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener("error", handleError, true);
+    window.addEventListener("unhandledrejection", handleRejection, true);
+
+    this._cleanupListeners = () => {
+      window.removeEventListener("error", handleError, true);
+      window.removeEventListener("unhandledrejection", handleRejection, true);
+    };
+  }
+
+  public componentWillUnmount() {
+    if (this._cleanupListeners) {
+      this._cleanupListeners();
+    }
+  }
+
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    const msg = error?.message || String(error || "");
+    if (msg.includes("ethereum") || msg.includes("Cannot redefine property")) {
+      return;
+    }
     console.error("Uncaught error:", error, errorInfo);
   }
 

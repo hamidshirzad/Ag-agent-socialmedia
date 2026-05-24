@@ -106,7 +106,7 @@ export default function Billing() {
               <TrendingUp className="text-sb-gold mx-auto mb-6" size={32} />
               <p className="text-[1.4rem] font-bold mb-1">Growth Index</p>
               <h4 className="text-[3.2rem] font-black text-sb-accent">+124%</h4>
-              <p className="text-[1.2rem] opacity-40 uppercase tracking-widest mt-2">Efficiency Rating</p>
+              <p className="text-[1.1rem] opacity-40 uppercase tracking-widest mt-2">Efficiency Rating</p>
             </div>
           </div>
         </div>

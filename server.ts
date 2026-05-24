@@ -1,4 +1,3 @@
-import './src/lib/datadog.js'; // must be first — initialises dd-trace + LLMObs
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
@@ -220,11 +219,11 @@ export function createApp() {
     try {
       // Log all events to Firestore for audit trail
       await targetDb.collection("billing_events").add({
-        id: event.id ?? null,
-        type: eventType ?? null,
-        resourceId: resource.id ?? null,
+        id: event.id,
+        type: eventType,
+        resourceId: resource.id,
         receivedAt: new Date(),
-        data: resource ?? null
+        data: resource
       });
 
       switch (eventType) {

@@ -15,7 +15,7 @@ export function StatsCard({ label, value, trend, icon: Icon }: StatsCardProps) {
           <Icon size={20} />
         </div>
         {trend && (
-          <span className={`px-3 py-1 rounded-full text-[1.2rem] font-black uppercase tracking-widest ${trend.startsWith('+') ? 'bg-sb-light text-sb-green' : 'bg-red-50 text-red-600'}`}>
+          <span className={`px-3 py-1 rounded-full text-[1.1rem] font-black uppercase tracking-widest ${trend.startsWith('+') ? 'bg-sb-light text-sb-green' : 'bg-red-50 text-red-600'}`}>
             {trend}
           </span>
         )}
