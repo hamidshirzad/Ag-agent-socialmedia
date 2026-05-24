@@ -102,7 +102,7 @@ export function Sidebar() {
             </div>
             <div className="truncate">
               <p className="text-[1.2rem] font-bold truncate leading-none mb-1 text-sb-green">{user?.email}</p>
-              <p className="text-[1.1rem] opacity-50 uppercase tracking-widest font-black">Operator</p>
+              <p className="text-[1.2rem] opacity-50 uppercase tracking-widest font-black">Operator</p>
             </div>
           </div>
           <button

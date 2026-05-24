@@ -64,7 +64,7 @@ export function Tooltip({ content, children, placement = "top", delay = 180 }: T
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.88 }}
               transition={{ duration: 0.1 }}
-              className="z-[9999] px-5 py-2 bg-sb-house text-white text-[1.1rem] font-black uppercase tracking-widest rounded-full shadow-2xl pointer-events-none whitespace-nowrap"
+              className="z-[9999] px-5 py-2 bg-sb-house text-white text-[1.2rem] font-black uppercase tracking-widest rounded-full shadow-2xl pointer-events-none whitespace-nowrap"
               {...getFloatingProps()}
             >
               {content}

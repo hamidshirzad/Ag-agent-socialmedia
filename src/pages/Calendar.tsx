@@ -68,7 +68,7 @@ export default function Calendar() {
                       </div>
                       <div className="space-y-3">
                          {dayData?.items.map((item, idx) => (
-                           <div key={idx} className="p-4 bg-sb-house text-white rounded-[8px] text-[1.1rem] font-bold uppercase tracking-tight shadow-md hover:translate-y-[-2px] transition-transform">
+                           <div key={idx} className="p-4 bg-sb-house text-white rounded-[8px] text-[1.2rem] font-bold uppercase tracking-tight shadow-md hover:translate-y-[-2px] transition-transform">
                               <div className="flex justify-between mb-2 opacity-50">
                                  <span>{item.time}</span>
                                  <span className="text-sb-gold">{item.type}</span>

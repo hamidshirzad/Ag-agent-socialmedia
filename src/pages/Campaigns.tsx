@@ -296,7 +296,7 @@ export default function Campaigns() {
                      <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                            <FlaskConical size={14} className="text-sb-gold" />
-                           <span className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60">A/B Variations</span>
+                           <span className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60">A/B Variations</span>
                         </div>
                         <button 
                            onClick={() => setActiveCampaignForVariation(campaign.id)}
@@ -308,7 +308,7 @@ export default function Campaigns() {
                      
                      <div className="space-y-4">
                         {(!campaign.variations || campaign.variations.length === 0) ? (
-                           <p className="text-[1.1rem] text-black/30 font-medium italic">No active experiments. Add one to start A/B testing.</p>
+                           <p className="text-[1.2rem] text-black/30 font-medium italic">No active experiments. Add one to start A/B testing.</p>
                         ) : (
                            campaign.variations.map(v => (
                               <div key={v.id} className="bg-sb-cream p-4 rounded-[8px] flex justify-between items-center group/var">
@@ -390,7 +390,7 @@ export default function Campaigns() {
 
                 <div className="space-y-8">
                   <div className="space-y-2">
-                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Variant Name</label>
+                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Variant Name</label>
                     <input 
                       placeholder="e.g. Action-Oriented vs Educational"
                       value={newVariation.name}
@@ -399,7 +399,7 @@ export default function Campaigns() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Variant Bias / Tone</label>
+                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Variant Bias / Tone</label>
                     <textarea 
                       placeholder="Describe how this variation should differ from the baseline strategy..."
                       value={newVariation.description}
@@ -447,7 +447,7 @@ export default function Campaigns() {
 
                 <form onSubmit={handleAddCampaign} className="space-y-8">
                   <div className="space-y-2">
-                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Campaign Name</label>
+                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Campaign Name</label>
                     <input 
                       required
                       placeholder="e.g. Q3 SaaS Expansion"
@@ -458,7 +458,7 @@ export default function Campaigns() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2 flex items-center gap-2">
+                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2 flex items-center gap-2">
                       <Globe size={12} /> Target Niche
                     </label>
                     <input 
@@ -471,7 +471,7 @@ export default function Campaigns() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Neural Goal / ROI Target</label>
+                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Neural Goal / ROI Target</label>
                     <textarea 
                       required
                       placeholder="Define the core intent and expected outcome..."

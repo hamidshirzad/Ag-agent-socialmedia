@@ -129,7 +129,7 @@ export default function Settings() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
               <div className="group">
-                <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2">Gemini API Key</label>
+                <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2">Gemini API Key</label>
                 <div className="relative">
                   <input 
                     type={formData.apiKeys.gemini && formData.apiKeys.gemini === profile?.apiKeys?.gemini ? "text" : "password"}
@@ -152,7 +152,7 @@ export default function Settings() {
                 </div>
               </div>
               <div className="group">
-                <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2">Claude (Anthropic) Key</label>
+                <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2">Claude (Anthropic) Key</label>
                 <div className="relative">
                   <input 
                     type={formData.apiKeys.anthropic && formData.apiKeys.anthropic === profile?.apiKeys?.anthropic ? "text" : "password"}
@@ -175,7 +175,7 @@ export default function Settings() {
                 </div>
               </div>
               <div className="group">
-                <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2">OpenAI Key</label>
+                <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-white/40 block mb-3 px-2">OpenAI Key</label>
                 <div className="relative">
                   <input 
                     type={formData.apiKeys.openai && formData.apiKeys.openai === profile?.apiKeys?.openai ? "text" : "password"}
@@ -199,7 +199,7 @@ export default function Settings() {
               </div>
             </div>
             
-            <div className="mt-12 flex items-center gap-4 text-sb-gold/60 text-[1.1rem] font-black uppercase tracking-widest">
+            <div className="mt-12 flex items-center gap-4 text-sb-gold/60 text-[1.2rem] font-black uppercase tracking-widest">
               <Shield size={16} /> 256-Bit Neural Encryption Active
             </div>
           </section>
@@ -228,7 +228,7 @@ export default function Settings() {
                       <div>
                         <h4 className="text-[1.4rem] font-black uppercase tracking-widest text-sb-house">{s.name}</h4>
                         <p className={cn(
-                          "text-[1.1rem] font-black uppercase tracking-widest mt-1",
+                          "text-[1.2rem] font-black uppercase tracking-widest mt-1",
                           connected ? "text-sb-accent" : "text-black/20"
                         )}>
                           {connected ? `SIGNED IN AS @${connected.username}` : "DISCONNECTED"}
@@ -238,7 +238,7 @@ export default function Settings() {
                     <button 
                       onClick={() => connected ? handleDisconnect(s.id) : handleConnect(s.id)}
                       className={cn(
-                        "text-[1.1rem] font-black border-2 px-5 py-2 uppercase tracking-widest rounded-full transition-all sb-button-active",
+                        "text-[1.2rem] font-black border-2 px-5 py-2 uppercase tracking-widest rounded-full transition-all sb-button-active",
                         connected ? "border-red-400/20 text-red-400 hover:bg-red-50" : "border-sb-green/10 text-sb-green hover:border-sb-green"
                       )}
                     >

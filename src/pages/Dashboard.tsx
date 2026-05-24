@@ -240,7 +240,7 @@ export default function Dashboard() {
               <h3 className="text-sb-green font-bold text-[1.6rem] uppercase tracking-wider">Intelligence Log</h3>
               <div className="flex items-center gap-3">
                 <div className="w-2.5 h-2.5 rounded-full bg-sb-accent animate-pulse shadow-[0_0_8px_#00754A]" />
-                <span className="text-[1.1rem] uppercase font-black tracking-widest text-sb-house">Realtime</span>
+                <span className="text-[1.2rem] uppercase font-black tracking-widest text-sb-house">Realtime</span>
               </div>
             </div>
             <div className="p-0">
@@ -300,7 +300,7 @@ export default function Dashboard() {
                 </div>
                 <button 
                   onClick={() => navigate('/campaigns')}
-                  className="w-full py-4 text-[1.1rem] font-black uppercase tracking-widest text-sb-green/60 hover:text-sb-green transition-all text-center"
+                  className="w-full py-4 text-[1.2rem] font-black uppercase tracking-widest text-sb-green/60 hover:text-sb-green transition-all text-center"
                 >
                   Manage All Objectives
                 </button>
@@ -309,7 +309,7 @@ export default function Dashboard() {
 
             <div className="bg-sb-house text-white rounded-[12px] sb-shadow-frap p-10 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-sb-gold" />
-              <p className="text-[1.1rem] mb-2 uppercase tracking-[0.2em] font-black text-sb-gold">Account Status</p>
+              <p className="text-[1.2rem] mb-2 uppercase tracking-[0.2em] font-black text-sb-gold">Account Status</p>
               <h4 className="text-[2.4rem] font-bold mb-4 uppercase tracking-sb leading-tight">{profile?.plan || 'Starter'} Edition</h4>
               <div className="h-1.5 bg-white/10 rounded-full mb-4 overflow-hidden">
                 <div className="h-full bg-sb-gold w-[42%] shadow-[0_0_8px_#cba258]" />
