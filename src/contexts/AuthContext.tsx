@@ -90,8 +90,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const code = error.code || "";
         const message = error.message || "";
         
-        if (code === "auth/popup-closed-by-user" || message.includes("popup-closed-by-user")) {
-          friendlyMessage = "The login popup was closed before completion. This app runs inside an iframe (the AI Studio preview), which restricts/blocks popups. To login successfully, please allow popups in your browser settings, or open this page in a new tab using the top-right menu for a seamless experience.";
+        if (
+          code === "auth/popup-closed-by-user" || 
+          message.includes("popup-closed-by-user") ||
+          code === "auth/cancelled-popup-request" ||
+          message.includes("cancelled-popup-request")
+        ) {
+          friendlyMessage = "The login popup was closed or cancelled. This app runs inside an iframe (the AI Studio preview), which restricts/blocks popups. To login successfully, please allow popups in your browser settings, or open this page in a new tab using the 'Launch in New Tab' button or the editor header button for a seamless experience.";
         } else if (code === "auth/popup-blocked" || message.includes("popup-blocked")) {
           friendlyMessage = "The browser blocked the login popup. Please enable popups for this site, or open this application in a new tab.";
         } else if (code === "auth/operation-not-allowed" || message.includes("operation-not-allowed")) {

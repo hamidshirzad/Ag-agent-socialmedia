@@ -675,13 +675,13 @@ export default function Calendar() {
           
           {/* Platform filter group */}
           <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-            <span className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60 px-2 flex items-center gap-2">
+            <span className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60 px-2 flex items-center gap-2">
               <Filter size={12} /> Platform View:
             </span>
             <button 
               onClick={() => setSelectedPlatformFilter("all")}
               className={cn(
-                "px-5 py-2.5 rounded-full text-[1.2rem] font-bold uppercase tracking-widest border transition-all",
+                "px-5 py-2.5 rounded-full text-[1.1rem] font-bold uppercase tracking-widest border transition-all",
                 selectedPlatformFilter === "all" 
                   ? "bg-sb-house text-white border-sb-house" 
                   : "bg-sb-cream text-black/50 border-transparent hover:border-black/5"
@@ -694,7 +694,7 @@ export default function Calendar() {
                 key={plat.id}
                 onClick={() => setSelectedPlatformFilter(plat.id)}
                 className={cn(
-                  "px-5 py-2.5 rounded-full text-[1.2rem] font-bold uppercase tracking-widest border transition-all flex items-center gap-2",
+                  "px-5 py-2.5 rounded-full text-[1.1rem] font-bold uppercase tracking-widest border transition-all flex items-center gap-2",
                   selectedPlatformFilter === plat.id 
                     ? "bg-sb-accent text-white border-sb-accent" 
                     : "bg-sb-cream text-black/50 border-transparent hover:border-black/5"
@@ -753,7 +753,7 @@ export default function Calendar() {
           <div className="lg:col-span-2 bg-white rounded-[12px] sb-shadow-card overflow-hidden self-start">
             {/* Visual Indicator Legend Bar */}
             <div className="px-6 py-4 bg-sb-cream/35 border-b border-black/5 flex items-center justify-between flex-wrap gap-4 select-none">
-              <span className="text-[1.2rem] font-black uppercase tracking-[0.15em] text-sb-green/70 flex items-center gap-2">
+              <span className="text-[1.1rem] font-black uppercase tracking-[0.15em] text-sb-green/70 flex items-center gap-2">
                 <Grid size={12} className="text-sb-gold shrink-0" /> Grid Indicators
               </span>
               <div className="flex items-center gap-6 flex-wrap">
@@ -780,7 +780,7 @@ export default function Calendar() {
                 {accessToken ? (
                   <div className="flex items-center gap-3 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-200">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[1.2rem] font-black text-emerald-800 uppercase tracking-wider">
+                    <span className="text-[1.1rem] font-black text-emerald-800 uppercase tracking-wider">
                       GCal Linked
                     </span>
                     <button 
@@ -794,7 +794,7 @@ export default function Calendar() {
                 ) : (
                   <button 
                     onClick={handleConnectGcal}
-                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-black text-[1.2rem] uppercase tracking-widest transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-black text-[1.1rem] uppercase tracking-widest transition-all shadow-sm flex items-center gap-2 cursor-pointer border-0"
                     title="Connect Google Calendar to sync personal meetings"
                   >
                     <CalendarIcon size={12} /> Sync Google Calendar
@@ -805,7 +805,7 @@ export default function Calendar() {
 
             <div className="grid grid-cols-7 border-b border-black/5 bg-sb-ceramic">
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
-                <div key={day} className="py-5 text-center font-black text-[1.2rem] uppercase tracking-[0.2em] text-sb-green/60">
+                <div key={day} className="py-5 text-center font-black text-[1.1rem] uppercase tracking-[0.2em] text-sb-green/60">
                   {day}
                 </div>
               ))}
@@ -906,7 +906,7 @@ export default function Calendar() {
                               key={post.id}
                               onClick={() => openScheduleModal(post)}
                               className={cn(
-                                "p-3 bg-sb-house hover:bg-sb-green font-bold text-[1.2rem] uppercase transition-all rounded-[6px] shadow-sm select-none cursor-pointer flex flex-col gap-1.5 text-white"
+                                "p-3 bg-sb-house hover:bg-sb-green font-bold text-[1.1rem] uppercase transition-all rounded-[6px] shadow-sm select-none cursor-pointer flex flex-col gap-1.5 text-white"
                               )}
                               title={post.caption}
                             >
@@ -923,7 +923,7 @@ export default function Calendar() {
                                   })}
                                 </div>
                               </div>
-                              <div className="truncate text-[1.2rem] tracking-wide font-semibold opacity-95">{post.caption}</div>
+                              <div className="truncate text-[1.1rem] tracking-wide font-semibold opacity-95">{post.caption}</div>
                               {post.status === 'draft' && (
                                 <span className="text-[0.8rem] bg-white/10 text-white border border-white/20 px-1 py-0 rounded self-start transform scale-90 -translate-x-1">DRAFT</span>
                               )}
@@ -939,14 +939,14 @@ export default function Calendar() {
                           return (
                             <div 
                               key={evt.id}
-                              className="p-3 bg-emerald-500 hover:bg-emerald-600 font-bold text-[1.2rem] uppercase transition-all rounded-[6px] shadow-sm select-none cursor-pointer flex flex-col gap-1 text-white relative group/gcal"
+                              className="p-3 bg-emerald-500 hover:bg-emerald-600 font-bold text-[1.1rem] uppercase transition-all rounded-[6px] shadow-sm select-none cursor-pointer flex flex-col gap-1 text-white relative group/gcal"
                               title={`${evt.summary || '(No Subject)'}\n${evt.description || 'Google Calendar Event'}`}
                             >
                               <div className="flex items-center justify-between pointer-events-none">
                                 <span className="opacity-80 text-[0.9rem] font-black">{formattedTime}</span>
                                 <span className="text-[0.8rem] font-black tracking-normal px-1 rounded bg-white/20">GCAL</span>
                               </div>
-                              <div className="truncate text-[1.2rem] tracking-wide font-semibold opacity-95">{evt.summary || '(No Subject)'}</div>
+                              <div className="truncate text-[1.1rem] tracking-wide font-semibold opacity-95">{evt.summary || '(No Subject)'}</div>
                               
                               <button
                                 type="button"
@@ -1025,7 +1025,7 @@ export default function Calendar() {
                   <div className="p-12 text-center flex flex-col items-center">
                     <CalendarIcon size={32} className="text-[#00e5ff] opacity-3 relative mb-4" />
                     <p className="text-[1.3rem] font-bold text-sb-green/40 uppercase tracking-widest">Pipeline Empty</p>
-                    <p className="text-black/30 text-[1.2rem] italic mt-1 leading-normal">No upcoming dispatches. Click days to trigger creative launches.</p>
+                    <p className="text-black/30 text-[1.1rem] italic mt-1 leading-normal">No upcoming dispatches. Click days to trigger creative launches.</p>
                   </div>
                 ) : (
                   upcomingScheduled.map((post) => {
@@ -1041,7 +1041,7 @@ export default function Calendar() {
                         className="p-6 hover:bg-sb-cream/40 transition-all cursor-pointer group flex flex-col gap-3"
                       >
                         <div className="flex justify-between items-start">
-                          <span className="text-[1.2rem] text-sb-accent font-black tracking-widest flex items-center gap-2">
+                          <span className="text-[1.1rem] text-sb-accent font-black tracking-widest flex items-center gap-2">
                             <Clock size={10} /> {formattedDateStr}
                           </span>
                           <div className="flex gap-1">
@@ -1115,7 +1115,7 @@ export default function Calendar() {
                 
                 {/* Title */}
                 <div className="space-y-3">
-                  <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
+                  <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
                     Event Title
                   </label>
                   <input 
@@ -1130,7 +1130,7 @@ export default function Calendar() {
 
                 {/* Description */}
                 <div className="space-y-3">
-                  <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
+                  <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
                     Description Context
                   </label>
                   <textarea 
@@ -1147,7 +1147,7 @@ export default function Calendar() {
                   
                   {/* Date selection */}
                   <div className="space-y-3">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
                       Event Date
                     </label>
                     <input 
@@ -1161,7 +1161,7 @@ export default function Calendar() {
 
                   {/* Start time */}
                   <div className="space-y-3">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
                       Start Time
                     </label>
                     <input 
@@ -1175,7 +1175,7 @@ export default function Calendar() {
 
                   {/* End time */}
                   <div className="space-y-3">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-emerald-800/70 block px-2">
                       End Time
                     </label>
                     <input 
@@ -1239,7 +1239,7 @@ export default function Calendar() {
                 
                 {/* Caption editor */}
                 <div className="space-y-3">
-                  <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
+                  <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
                     Visual Copy / Caption Context
                   </label>
                   <textarea 
@@ -1259,7 +1259,7 @@ export default function Calendar() {
 
                 {/* Platform Toggles */}
                 <div className="space-y-4">
-                  <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
+                  <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
                     Deploy Channels
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -1294,7 +1294,7 @@ export default function Calendar() {
                   
                   {/* Scheduled Date */}
                   <div className="space-y-3">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
                       Dispatch Date
                     </label>
                     <input 
@@ -1308,7 +1308,7 @@ export default function Calendar() {
 
                   {/* Scheduled Time */}
                   <div className="space-y-3">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
                       Target Time (HH:MM)
                     </label>
                     <input 
@@ -1322,7 +1322,7 @@ export default function Calendar() {
 
                   {/* Post Type enum */}
                   <div className="space-y-3">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
                       Asset Type
                     </label>
                     <div className="relative">
@@ -1346,7 +1346,7 @@ export default function Calendar() {
                 {/* Media URL and generation */}
                 <div className="space-y-3">
                   <div className="flex justify-between items-center px-2">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60">
                       Attached Media URL
                     </label>
                     <button
@@ -1384,7 +1384,7 @@ export default function Calendar() {
                   
                   {/* Campaign associate */}
                   <div className="space-y-3">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
                       Brand Campaign Link
                     </label>
                     <div className="relative">
@@ -1406,7 +1406,7 @@ export default function Calendar() {
 
                   {/* Status selection */}
                   <div className="space-y-3">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60 block px-2">
                       Dispatch state
                     </label>
                     <div className="relative">
@@ -1430,7 +1430,7 @@ export default function Calendar() {
                 {/* Advanced Co-pilot flags */}
                 <div className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <label className="flex items-center justify-between p-4 bg-sb-cream/50 rounded-[8px] border border-black/5 cursor-pointer hover:bg-sb-cream transition-all">
-                    <span className="text-[1.2rem] font-black uppercase tracking-widest text-black/70 block px-1">
+                    <span className="text-[1.1rem] font-black uppercase tracking-widest text-black/70 block px-1">
                       AI agent auto engagement
                     </span>
                     <input 
@@ -1442,7 +1442,7 @@ export default function Calendar() {
                   </label>
 
                   <label className="flex items-center justify-between p-4 bg-sb-cream/50 rounded-[8px] border border-black/5 cursor-pointer hover:bg-sb-cream transition-all">
-                    <span className="text-[1.2rem] font-black uppercase tracking-widest text-black/70 block px-1">
+                    <span className="text-[1.1rem] font-black uppercase tracking-widest text-black/70 block px-1">
                       Neural custom auto-reply
                     </span>
                     <input 

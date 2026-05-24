@@ -135,7 +135,7 @@ export default function ScoringRules() {
               <TrendingUp size={24} />
             </div>
             <div>
-              <p className="text-[1.2rem] uppercase font-black tracking-widest text-black/40 mb-1">Max Score</p>
+              <p className="text-[1.1rem] uppercase font-black tracking-widest text-black/40 mb-1">Max Score</p>
               <h3 className="text-[2.4rem] font-bold text-sb-green leading-none">1000</h3>
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function ScoringRules() {
               <Zap size={24} />
             </div>
             <div>
-              <p className="text-[1.2rem] uppercase font-black tracking-widest text-black/40 mb-1">Active Rules</p>
+              <p className="text-[1.1rem] uppercase font-black tracking-widest text-black/40 mb-1">Active Rules</p>
               <h3 className="text-[2.4rem] font-bold text-sb-green leading-none">{rules.filter(r => r.isActive).length}</h3>
             </div>
           </div>
@@ -153,7 +153,7 @@ export default function ScoringRules() {
               <Database size={24} />
             </div>
             <div>
-              <p className="text-[1.2rem] uppercase font-black tracking-widest text-black/40 mb-1">Data Sources</p>
+              <p className="text-[1.1rem] uppercase font-black tracking-widest text-black/40 mb-1">Data Sources</p>
               <h3 className="text-[2.4rem] font-bold text-sb-green leading-none">3</h3>
             </div>
           </div>
@@ -183,7 +183,7 @@ export default function ScoringRules() {
                   </div>
                   <div>
                     <div className="flex items-center gap-3 mb-1">
-                      <span className="text-[1.2rem] font-black uppercase tracking-widest text-sb-green/40">{rule.category}</span>
+                      <span className="text-[1.1rem] font-black uppercase tracking-widest text-sb-green/40">{rule.category}</span>
                       <span className={cn(
                         "text-[1rem] px-2 py-0.5 rounded-full uppercase font-black tracking-wider",
                         rule.isActive ? "bg-sb-light text-sb-green" : "bg-black/10 text-black/50"
@@ -199,7 +199,7 @@ export default function ScoringRules() {
 
                 <div className="flex items-center gap-12">
                   <div className="text-right">
-                    <p className="text-[1.2rem] uppercase font-black tracking-widest text-black/40 mb-1">Neural Weight</p>
+                    <p className="text-[1.1rem] uppercase font-black tracking-widest text-black/40 mb-1">Neural Weight</p>
                     <span className={cn(
                       "text-[2rem] font-black",
                       rule.points >= 0 ? "text-sb-accent" : "text-red-500"
@@ -262,7 +262,7 @@ export default function ScoringRules() {
               <form onSubmit={handleAddRule} className="p-10 space-y-8">
                 <div className="grid grid-cols-2 gap-8">
                   <div className="group">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-2 px-2">Category</label>
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-2 px-2">Category</label>
                     <select 
                       value={newRule.category}
                       onChange={e => setNewRule({...newRule, category: e.target.value as any})}
@@ -274,7 +274,7 @@ export default function ScoringRules() {
                     </select>
                   </div>
                   <div className="group">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-2 px-2">Points (Weight)</label>
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-2 px-2">Points (Weight)</label>
                     <input 
                       type="number"
                       value={newRule.points}
@@ -285,7 +285,7 @@ export default function ScoringRules() {
                 </div>
 
                 <div className="group">
-                  <label className="text-[1.2rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-2 px-2">Attribute / Key</label>
+                  <label className="text-[1.1rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-2 px-2">Attribute / Key</label>
                   <input 
                     placeholder="e.g. company_size, message_count, industry"
                     value={newRule.attribute}
@@ -297,7 +297,7 @@ export default function ScoringRules() {
 
                 <div className="grid grid-cols-2 gap-8">
                   <div className="group">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-2 px-2">Operator</label>
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-2 px-2">Operator</label>
                     <select 
                       value={newRule.operator}
                       onChange={e => setNewRule({...newRule, operator: e.target.value})}
@@ -310,7 +310,7 @@ export default function ScoringRules() {
                     </select>
                   </div>
                   <div className="group">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-2 px-2">Threshold Value</label>
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.15em] text-sb-green/60 block mb-2 px-2">Threshold Value</label>
                     <input 
                       placeholder="e.g. 'Enterprise', '5', 'Tech'"
                       value={newRule.value}

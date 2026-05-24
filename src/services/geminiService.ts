@@ -1,12 +1,10 @@
 import { generateContentWithEngine } from "./aiService";
 
-interface ApiKeys { gemini?: string; anthropic?: string; openai?: string; }
-
 export async function generateMarketingContent(
-  niche: string,
-  targetAudience: string,
-  goal: string,
-  apiKeys?: ApiKeys,
+  niche: string, 
+  targetAudience: string, 
+  goal: string, 
+  apiKeys?: any,
   provider: 'gemini' | 'anthropic' | 'openai' = 'gemini'
 ) {
   const prompt = `
@@ -30,7 +28,7 @@ export async function generateMarketingContent(
   return generateContentWithEngine(prompt, { provider, apiKey: userKey });
 }
 
-export async function analyzeLeadIntent(message: string, apiKeys?: ApiKeys) {
+export async function analyzeLeadIntent(message: string, apiKeys?: any) {
   const prompt = `
     Analyze the intent of this message from a potential lead: "${message}"
     Determine:
