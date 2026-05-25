@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { onAuthStateChanged, User, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -19,6 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const signingInRef = useRef(false);
 
   const fetchProfile = async (uid: string) => {
     try {
@@ -38,20 +39,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        await fetchProfile(user.uid);
+        if (!signingInRef.current) {
+          // Page-load / session-restore path — signIn() is not active, own the fetch here
+          await fetchProfile(user.uid);
+          setLoading(false);
+        }
+        // When signingInRef is true, signIn() owns profile fetch + setLoading
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
     return unsubscribe;
   }, []);
 
   const signIn = async (): Promise<{ isNewUser: boolean }> => {
+    signingInRef.current = true;
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
-      setUser(firebaseUser); // Update immediately to prevent race conditions
+      setUser(firebaseUser);
 
       // Initialize profile if not exists
       const userRef = doc(db, "users", firebaseUser.uid);
@@ -75,6 +82,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Login failed", error);
       return { isNewUser: false };
+    } finally {
+      signingInRef.current = false;
+      setLoading(false);
     }
   };
 
