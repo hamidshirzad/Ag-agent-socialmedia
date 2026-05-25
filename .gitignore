@@ -6,16 +6,3 @@ coverage/
 *.log
 .env*
 !.env.example
-playwright-report/
-test-results/
-
-# Terraform — secrets and local state must never be committed
-infra/.terraform/
-infra/.terraform.lock.hcl
-infra/terraform.tfstate
-infra/terraform.tfstate.backup
-infra/terraform.tfvars
-lighthouse-reports/
-
-.vercel
-!.vercel/project.json
