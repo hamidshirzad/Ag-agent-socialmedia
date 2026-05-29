@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PageMeta from "../components/PageMeta";
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -74,8 +75,9 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
+      <PageMeta title="Dashboard" description="Monitor your campaigns, leads, and AI performance in real time." path="/dashboard" />
       <Sidebar />
-      
+
       <main className="flex-1 p-12 lg:p-24 overflow-y-auto">
         <header className="flex justify-between items-end mb-16 pb-8 border-b border-black/10">
           <div>

@@ -6,6 +6,7 @@ import { ArrowRight, Zap, Target, Globe, Briefcase } from "lucide-react";
 import { doc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { cn } from "../lib/utils";
+import PageMeta from "../components/PageMeta";
 
 export default function Onboarding() {
   const { user, refreshProfile } = useAuth();
@@ -169,6 +170,7 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-sb-cream text-black font-sans flex flex-col items-center justify-center p-8 lg:p-12 overflow-hidden">
+      <PageMeta title="Get Started" description="Set up your Fourdoor AI workspace in minutes." path="/onboarding" />
       <div className="max-w-2xl w-full">
         <div className="mb-16 flex justify-center">
            <div className="flex items-center gap-4 font-black text-[2.8rem] tracking-sb text-sb-green">

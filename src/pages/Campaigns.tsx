@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
+import PageMeta from "../components/PageMeta";
 import { Tooltip } from "../components/Tooltip";
 import { motion, AnimatePresence } from "motion/react";
 import { 
@@ -168,6 +169,7 @@ export default function Campaigns() {
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
+      <PageMeta title="Campaigns" description="Create, manage, and track your AI-powered social campaigns." path="/campaigns" />
       <Sidebar />
       
       <main className="flex-1 p-12 lg:p-20 overflow-y-auto">

@@ -5,6 +5,7 @@ import { useToast } from "../components/Toast";
 import { ArrowRight, Zap, BarChart3, Users, Send, Mic2, Twitter, Instagram, Linkedin, Youtube, CheckCircle2 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { cn } from "../lib/utils";
+import PageMeta from "../components/PageMeta";
 
 /* ── Atmospheric gradient orb ──────────────────────────────────────────── */
 function GradientOrb({ color, className }: { color: string; className?: string }) {
@@ -82,6 +83,7 @@ export default function Landing() {
 
   return (
     <div className="bg-sb-cream min-h-screen">
+      <PageMeta />
       {/* Navigation */}
       <nav className="flex justify-between items-center px-12 py-6 bg-white sb-shadow-nav sticky top-0 z-50">
         <div className="flex items-center gap-4">

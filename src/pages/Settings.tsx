@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
+import PageMeta from "../components/PageMeta";
 import { Tooltip } from "../components/Tooltip";
 import { useToast } from "../components/Toast";
 import { useAuth } from "../contexts/AuthContext";
@@ -110,6 +111,7 @@ export default function Settings() {
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
+      <PageMeta title="Settings" description="Configure your AI integrations, API keys, and account preferences." path="/settings" />
       <Sidebar />
       <main className="flex-1 p-12 lg:p-24 max-w-7xl">
         <header className="mb-16 pb-10 border-b border-black/5">

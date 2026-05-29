@@ -1,4 +1,5 @@
 import { Sidebar } from "../components/Sidebar";
+import PageMeta from "../components/PageMeta";
 import { Tooltip } from "../components/Tooltip";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Share2, Eye, Edit3, Plus, Zap } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -15,6 +16,7 @@ export default function Calendar() {
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
+      <PageMeta title="Calendar" description="Schedule and manage your content publication calendar." path="/calendar" />
       <Sidebar />
       <main className="flex-1 p-12 lg:p-24 overflow-y-auto">
         <header className="flex justify-between items-end mb-16 pb-8 border-b border-black/10">

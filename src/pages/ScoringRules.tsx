@@ -1,5 +1,6 @@
 import { useState, useEffect, FormEvent } from "react";
 import { Sidebar } from "../components/Sidebar";
+import PageMeta from "../components/PageMeta";
 import { useAuth } from "../contexts/AuthContext";
 import { 
   Zap, 
@@ -113,6 +114,7 @@ export default function ScoringRules() {
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
+      <PageMeta title="Lead Scoring" description="Define custom lead scoring rules to prioritise your pipeline." path="/scoring" />
       <Sidebar />
       
       <main className="flex-1 p-12 lg:p-24 overflow-y-auto">
