@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { generateContentWithEngine } from "./aiService";
 
 // Mock the AI SDKs
@@ -7,18 +7,6 @@ vi.mock("@google/genai", () => ({
     return {
       models: {
         generateContent: vi.fn().mockResolvedValue({ text: '{"success": true}' })
-      }
-    };
-  })
-}));
-
-vi.mock("@anthropic-ai/sdk", () => ({
-  default: vi.fn().mockImplementation(function() {
-    return {
-      messages: {
-        create: vi.fn().mockResolvedValue({
-          content: [{ type: "text", text: '{"claude": true}' }]
-        })
       }
     };
   })
@@ -38,50 +26,66 @@ vi.mock("openai", () => ({
   })
 }));
 
+// Claude now proxies through /api/ai/claude — mock global fetch
+const mockFetch = vi.fn();
+beforeEach(() => {
+  mockFetch.mockClear();
+  vi.stubGlobal("fetch", mockFetch);
+  mockFetch.mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ claude: true }),
+  });
+});
+
 describe("aiService / generateContentWithEngine", () => {
-  it("should route to gemini correctly", async () => {
+  it("routes to Gemini correctly", async () => {
     const result = await generateContentWithEngine("test", { provider: "gemini", apiKey: "key" });
     expect(result).toEqual({ success: true });
   });
 
-  it("should route to anthropic correctly", async () => {
+  it("routes to Anthropic via /api/ai/claude proxy", async () => {
     const result = await generateContentWithEngine("test", { provider: "anthropic", apiKey: "key" });
     expect(result).toEqual({ claude: true });
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/ai/claude",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
-  it("should route to openai correctly", async () => {
+  it("forwards systemPrompt to the Claude proxy", async () => {
+    await generateContentWithEngine("test", { provider: "anthropic", apiKey: "key" }, "custom system");
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.systemPrompt).toBe("custom system");
+  });
+
+  it("routes to OpenAI correctly", async () => {
     const result = await generateContentWithEngine("test", { provider: "openai", apiKey: "key" });
     expect(result).toEqual({ gpt: true });
   });
 
-  it("should throw for unsupported provider", async () => {
+  it("throws for unsupported provider", async () => {
     // @ts-ignore
     await expect(generateContentWithEngine("test", { provider: "invalid" }))
       .rejects.toThrow("Unsupported AI Provider");
   });
 
-  it("should throw for missing keys", async () => {
+  it("throws for missing Anthropic key", async () => {
     await expect(generateContentWithEngine("test", { provider: "anthropic" }))
       .rejects.toThrow("Anthropic API Key missing");
-      
+  });
+
+  it("throws for missing OpenAI key", async () => {
     await expect(generateContentWithEngine("test", { provider: "openai" }))
       .rejects.toThrow("OpenAI API Key missing");
   });
 
-  it("should attempt extraction for Claude if JSON parsing fails", async () => {
-    const Anthropic = (await import("@anthropic-ai/sdk")).default;
-    // @ts-ignore
-    Anthropic.mockImplementationOnce(function() {
-      return {
-        messages: {
-          create: vi.fn().mockResolvedValue({
-            content: [{ type: "text", text: 'Prose text... {"extracted": true} more prose' }]
-          })
-        }
-      };
+  it("throws when Claude proxy returns an error response", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      statusText: "Internal Server Error",
+      json: () => Promise.resolve({ error: "Model failed." }),
     });
-
-    const result = await generateContentWithEngine("test", { provider: "anthropic", apiKey: "key" });
-    expect(result).toEqual({ extracted: true });
+    await expect(generateContentWithEngine("test", { provider: "anthropic", apiKey: "key" }))
+      .rejects.toThrow("Model failed.");
   });
 });
