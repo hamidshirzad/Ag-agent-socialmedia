@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
+import PageMeta from "../components/PageMeta";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Users, 
@@ -96,6 +97,7 @@ export default function LeadInbox() {
 
   return (
     <div className="flex h-screen bg-sb-cream text-black font-sans selection:bg-sb-house selection:text-white">
+      <PageMeta title="Lead Inbox" description="Engage and qualify inbound leads with AI-powered conversations." path="/leads" />
       <Sidebar />
       
       <main className="flex-1 flex overflow-hidden">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
+import PageMeta from "../components/PageMeta";
 import { motion, AnimatePresence } from "motion/react";
 import { Zap, Send, RotateCcw, Video, FileText, Share2, Sparkles, CheckCircle2, Brain, Database, Shield, Calendar, Clock, Target, FlaskConical, Play, Loader2, Lightbulb, User, ArrowRight, Copy, Check, BookOpen, Trash2, Edit3, Filter, Search } from "lucide-react";
 import { generateMarketingContent, generateContentIdeas, generateMarketingContentForIdea } from "../services/geminiService";
@@ -404,6 +405,7 @@ export default function ContentEngine() {
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb selection:bg-sb-house selection:text-white">
+      <PageMeta title="Content Engine" description="Generate platform-native posts with AI in seconds." path="/content" />
       <Sidebar />
       <main className="flex-1 p-12 lg:p-24 overflow-y-auto">
         <header className="mb-16">

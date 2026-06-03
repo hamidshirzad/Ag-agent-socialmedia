@@ -24,6 +24,15 @@ export default function ProtectedRoute({
     return <Navigate to="/" />;
   }
 
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f5f5f4] text-[#0a0a0a] font-mono">
+        <div className="w-12 h-12 border-4 border-[#0a0a0a] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-[10px] uppercase font-black tracking-widest animate-pulse italic">Neural_Sync_Active</p>
+      </div>
+    );
+  }
+
   if (requiresOnboarding) {
     // This is the /onboarding route — redirect away if already done
     if (profile?.onboardingComplete) return <Navigate to="/dashboard" />;
