@@ -66,9 +66,13 @@ export default function Landing() {
       const { isNewUser } = await signIn();
       navigate(isNewUser ? "/onboarding" : "/dashboard");
     } catch (err: any) {
-      const code: string = err?.code ?? "";
-      if (code !== "auth/popup-closed-by-user" && code !== "auth/cancelled-popup-request") {
-        toast.error(err?.message ?? "Sign-in failed. Please try again.");
+      // Ignore popup-cancelled errors (user closed the login window)
+      const msg: string = err?.message ?? err?.error_description ?? "";
+      const isPopupClosed = msg.toLowerCase().includes("popup") ||
+        err?.error === "access_denied" ||
+        err?.code === "auth/popup-closed-by-user";
+      if (!isPopupClosed) {
+        toast.error(msg || "Sign-in failed. Please try again.");
       }
     } finally {
       setSigningIn(false);

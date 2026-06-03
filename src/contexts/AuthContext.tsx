@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { onAuthStateChanged, User, signInWithPopup, signOut } from "firebase/auth";
-import { auth, googleProvider, db, handleFirestoreError, OperationType } from "../lib/firebase";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
+import { signInWithCustomToken, signOut as firebaseSignOut, type User } from "firebase/auth";
+import { auth, db } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { UserProfile } from "../types";
+import type { UserProfile } from "../types";
 
 interface AuthContextType {
   user: User | null;
@@ -15,89 +16,155 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function getFirebaseCustomToken(idToken: string): Promise<string> {
+  const resp = await fetch("/.netlify/functions/firebase-custom-token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+  if (!resp.ok) {
+    const { error } = await resp.json().catch(() => ({ error: "Token exchange failed" }));
+    throw new Error(error);
+  }
+  const { firebaseToken } = await resp.json();
+  return firebaseToken;
+}
+
+async function syncToFirestore(
+  fbUser: User,
+  email: string,
+  name: string
+): Promise<{ profile: UserProfile; isNewUser: boolean }> {
+  const uid     = fbUser.uid;
+  const userRef = doc(db, "users", uid);
+  const snap    = await getDoc(userRef);
+
+  if (!snap.exists()) {
+    const newProfile: Partial<UserProfile> = {
+      email,
+      name: name || "New User",
+      plan: "starter",
+      subscriptionStatus: "inactive",
+      onboardingComplete: false,
+      createdAt: new Date().toISOString(),
+    };
+    await setDoc(userRef, newProfile);
+    return { profile: { id: uid, ...newProfile } as UserProfile, isNewUser: true };
+  }
+
+  return { profile: { id: uid, ...snap.data() } as UserProfile, isNewUser: false };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const signingInRef = useRef(false);
+  const {
+    loginWithPopup,
+    logout: auth0Logout,
+    getIdTokenClaims,
+    isAuthenticated,
+    isLoading: auth0Loading,
+    user: auth0User,
+  } = useAuth0();
 
-  const fetchProfile = async (uid: string) => {
-    try {
-      const userRef = doc(db, "users", uid);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        setProfile({ id: uid, ...userSnap.data() } as UserProfile);
-      } else {
-        setProfile(null);
-      }
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `users/${uid}`);
-    }
-  };
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [profile,      setProfile]      = useState<UserProfile | null>(null);
+  const [loading,      setLoading]      = useState(true);
 
+  // Restore Firebase session when Auth0 session already exists (page reload)
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        if (!signingInRef.current) {
-          // Page-load / session-restore path — signIn() is not active, own the fetch here
-          await fetchProfile(user.uid);
-          setLoading(false);
-        }
-        // When signingInRef is true, signIn() owns profile fetch + setLoading
-      } else {
-        setProfile(null);
+    if (auth0Loading) return;
+
+    if (!isAuthenticated || !auth0User) {
+      setLoading(false);
+      return;
+    }
+
+    // Skip if Firebase is already signed in (signIn() handled it already)
+    if (auth.currentUser) {
+      setLoading(false);
+      return;
+    }
+
+    const restore = async () => {
+      try {
+        const claims  = await getIdTokenClaims();
+        const idToken = claims?.__raw;
+        if (!idToken) throw new Error("No ID token");
+
+        const firebaseToken = await getFirebaseCustomToken(idToken);
+        const credential    = await signInWithCustomToken(auth, firebaseToken);
+        const fbUser        = credential.user;
+
+        const { profile: prof } = await syncToFirestore(
+          fbUser,
+          auth0User.email ?? "",
+          auth0User.name  ?? ""
+        );
+
+        setFirebaseUser(fbUser);
+        setProfile(prof);
+      } catch (err) {
+        console.error("[Auth] Session restore failed:", err);
+      } finally {
         setLoading(false);
       }
-    });
-    return unsubscribe;
-  }, []);
+    };
+
+    restore();
+  }, [isAuthenticated, auth0Loading]);
 
   const signIn = async (): Promise<{ isNewUser: boolean }> => {
-    signingInRef.current = true;
+    await loginWithPopup();
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const firebaseUser = result.user;
-      setUser(firebaseUser);
+      const claims  = await getIdTokenClaims();
+      const idToken = claims?.__raw;
+      if (!idToken) throw new Error("No ID token after login");
 
-      // Initialize profile if not exists
-      const userRef = doc(db, "users", firebaseUser.uid);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) {
-        const newProfile: Partial<UserProfile> = {
-          email: firebaseUser.email || "",
-          name: firebaseUser.displayName || "New User",
-          plan: 'starter',
-          subscriptionStatus: 'inactive',
-          onboardingComplete: false,
-          createdAt: new Date().toISOString(),
-        };
-        await setDoc(userRef, newProfile);
-        setProfile({ id: firebaseUser.uid, ...newProfile } as UserProfile);
-        return { isNewUser: true };
-      } else {
-        setProfile({ id: firebaseUser.uid, ...userSnap.data() } as UserProfile);
-        return { isNewUser: false };
-      }
-    } catch (error) {
-      console.error("Login failed", error);
-      return { isNewUser: false };
-    } finally {
-      signingInRef.current = false;
+      const firebaseToken = await getFirebaseCustomToken(idToken);
+      const credential    = await signInWithCustomToken(auth, firebaseToken);
+      const fbUser        = credential.user;
+
+      const { profile: prof, isNewUser } = await syncToFirestore(
+        fbUser,
+        auth0User?.email ?? "",
+        auth0User?.name  ?? ""
+      );
+
+      setFirebaseUser(fbUser);
+      setProfile(prof);
       setLoading(false);
+      return { isNewUser };
+    } catch (err) {
+      console.error("[Auth] Sign-in sync failed:", err);
+      return { isNewUser: false };
     }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    await firebaseSignOut(auth);
+    setFirebaseUser(null);
+    setProfile(null);
+    auth0Logout({ logoutParams: { returnTo: window.location.origin } });
   };
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.uid);
+    if (!firebaseUser) return;
+    try {
+      const snap = await getDoc(doc(db, "users", firebaseUser.uid));
+      if (snap.exists()) setProfile({ id: firebaseUser.uid, ...snap.data() } as UserProfile);
+    } catch (err) {
+      console.error("[Auth] Profile refresh failed:", err);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, logout, refreshProfile }}>
+    <AuthContext.Provider value={{
+      user:     firebaseUser,
+      profile,
+      loading:  loading || auth0Loading,
+      signIn,
+      logout,
+      refreshProfile,
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -105,8 +172,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }
