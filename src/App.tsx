@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import ScoringRules from "./pages/ScoringRules";
 import Billing from "./pages/Billing";
 import Campaigns from "./pages/Campaigns";
+import Team from "./pages/Team";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/outreach" element={<ProtectedRoute><Outreach /></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
           <Route path="/scoring" element={<ProtectedRoute><ScoringRules /></ProtectedRoute>} />
+          <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
           <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           
