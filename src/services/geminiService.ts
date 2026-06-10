@@ -12,6 +12,17 @@ const LEAD_INTEL_SYSTEM =
   `You are a lead intelligence engine. ` +
   `Classify the intent and buying-readiness of inbound prospect messages and produce actionable engagement data.`;
 
+// Condensed Meta/Facebook Ads creative-diversification framework, injected into
+// content-generation prompts so output varies across messaging angle, visual
+// style, and placement/format — not just topic.
+const CREATIVE_DIVERSIFICATION_GUIDE = `
+<creative_diversification_guide>
+  <messaging_angles>urgency, social proof, aspirational, problem/solution, seasonal/topical</messaging_angles>
+  <visual_styles>people+product in context, functional benefit (what it does), emotional benefit (how it feels), lo-fi/UGC-style vs. polished/produced</visual_styles>
+  <formats>Reel/Story (9:16, vertical, full-bleed), Feed/Carousel (4:5 or 1:1), Landscape (16:9 for link/banner placements)</formats>
+  <mobile_first_rules>hook the viewer in the first 3 seconds; design so the message lands with sound off (captions/on-screen text) as well as sound on; keep short-form video tight and skippable-proof</mobile_first_rules>
+</creative_diversification_guide>`.trim();
+
 function pickKey(provider: 'gemini' | 'anthropic' | 'openai', apiKeys?: ApiKeys): string | undefined {
   if (provider === 'gemini')    return apiKeys?.gemini;
   if (provider === 'anthropic') return apiKeys?.anthropic;
@@ -34,13 +45,15 @@ export async function generateMarketingContent(
   <goal>${goal}</goal>
 </context>
 
+${CREATIVE_DIVERSIFICATION_GUIDE}
+
 <output_instructions>
 Return a JSON object with exactly these fields:
-- tiktokScript: a complete, high-energy 30-second TikTok script including visual cues [Scene: ...] and spoken lines.
+- tiktokScript: a complete, high-energy 30-second TikTok script including visual cues [Scene: ...] and spoken lines. Apply the mobile_first_rules: hook the viewer in the first 3 seconds and make sure the message lands with sound off (captions/on-screen text).
 - linkedinPost: a professional thought-leadership post with conversational formatting, bullet points, and a strong CTA.
 - xThread: a 3-tweet informative thread, each tweet prefixed with [Tweet N].
 - hashtags: an array of exactly 10 targeted hashtags.
-- suggestedImagePrompt: a vivid, non-cluttered prompt for a 16:9 background image.
+- suggestedImagePrompt: a vivid, non-cluttered image prompt. Pick one visual_style and one format (with aspect ratio) from the creative_diversification_guide that best fits this content, and name both explicitly in the prompt.
 </output_instructions>
   `.trim();
 
@@ -90,7 +103,11 @@ export async function generateContentIdeas(
   ${brief ? `<brief>${brief}</brief>` : ''}
 </context>
 
+${CREATIVE_DIVERSIFICATION_GUIDE}
+
 <output_instructions>
+Each of the 3 ideas must use a DIFFERENT messaging_angle and a DIFFERENT visual_style from the creative_diversification_guide above, paired with a fitting format. Do not repeat the same angle, style, or format across the 3 ideas.
+
 Return a JSON object exactly matching this structure:
 {
   "assistantIntroduction": "A professional, encouraging 1-2 sentence greeting explaining your creative focus for this niche.",
@@ -101,11 +118,13 @@ Return a JSON object exactly matching this structure:
       "concept": "Engaging description of the content concept",
       "targetPlatformFit": "LinkedIn, X, or TikTok — explain why in 1 sentence",
       "angleAndHook": "The scroll-stopping hook or emotional angle",
-      "suggestedVisualPrompt": "A highly descriptive, artistic prompt to create a beautiful digital visual",
+      "messagingAngle": "One messaging angle from the guide, e.g. urgency, social proof, aspirational, problem/solution, seasonal/topical",
+      "recommendedFormat": "A placement + aspect ratio from the guide, e.g. 'Reel — 9:16, hook in first 3s'",
+      "suggestedVisualPrompt": "A highly descriptive, artistic prompt to create a beautiful digital visual, naming the visual_style used (e.g. lo-fi/UGC vs. polished, functional vs. emotional benefit) and matching the recommended format's aspect ratio",
       "strategicReason": "How this solves the user's goals and hooks the specific audience"
     },
-    { "id": "idea_2", "title": "...", "concept": "...", "targetPlatformFit": "...", "angleAndHook": "...", "suggestedVisualPrompt": "...", "strategicReason": "..." },
-    { "id": "idea_3", "title": "...", "concept": "...", "targetPlatformFit": "...", "angleAndHook": "...", "suggestedVisualPrompt": "...", "strategicReason": "..." }
+    { "id": "idea_2", "title": "...", "concept": "...", "targetPlatformFit": "...", "angleAndHook": "...", "messagingAngle": "...", "recommendedFormat": "...", "suggestedVisualPrompt": "...", "strategicReason": "..." },
+    { "id": "idea_3", "title": "...", "concept": "...", "targetPlatformFit": "...", "angleAndHook": "...", "messagingAngle": "...", "recommendedFormat": "...", "suggestedVisualPrompt": "...", "strategicReason": "..." }
   ]
 }
 </output_instructions>
@@ -145,13 +164,15 @@ export async function generateMarketingContentForIdea(
   <goal>${goal}</goal>
 </context>
 
+${CREATIVE_DIVERSIFICATION_GUIDE}
+
 <output_instructions>
 Return a JSON object with exactly these fields:
-- tiktokScript: a complete, high-energy 30-second TikTok script including visual cues [Scene: ...] and spoken lines.
+- tiktokScript: a complete, high-energy 30-second TikTok script including visual cues [Scene: ...] and spoken lines. Apply the mobile_first_rules: hook the viewer in the first 3 seconds and make sure the message lands with sound off (captions/on-screen text).
 - linkedinPost: a professional thought-leadership post with conversational formatting, bullet points, and a strong CTA.
 - xThread: a 3–5 tweet thread, each tweet prefixed with [Tweet N], designed to go viral and provide real value.
 - hashtags: an array of exactly 10 targeted hashtags.
-- suggestedImagePrompt: a vivid, non-cluttered, landscape (16:9) image prompt representing the visual direction above.
+- suggestedImagePrompt: a vivid, non-cluttered image prompt building on the visual direction above. Pick the visual_style and format (with aspect ratio) from the creative_diversification_guide that best matches this idea, and name both explicitly.
 </output_instructions>
   `.trim();
 

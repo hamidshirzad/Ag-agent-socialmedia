@@ -41,6 +41,8 @@ export default function ContentEngine() {
       concept: string;
       targetPlatformFit: string;
       angleAndHook: string;
+      messagingAngle: string;
+      recommendedFormat: string;
       suggestedVisualPrompt: string;
       strategicReason: string;
     }>;
@@ -958,9 +960,21 @@ export default function ContentEngine() {
                     >
                       <div className="flex justify-between items-start gap-4 mb-4">
                         <div>
-                          <span className="px-4 py-1.5 bg-sb-cream text-sb-green text-[1rem] font-black uppercase tracking-wider rounded-full border border-sb-green/10">
-                            {idea.targetPlatformFit}
-                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="px-4 py-1.5 bg-sb-cream text-sb-green text-[1rem] font-black uppercase tracking-wider rounded-full border border-sb-green/10">
+                              {idea.targetPlatformFit}
+                            </span>
+                            {idea.messagingAngle && (
+                              <span className="px-4 py-1.5 bg-sb-gold/10 text-sb-gold text-[1rem] font-black uppercase tracking-wider rounded-full border border-sb-gold/20">
+                                {idea.messagingAngle}
+                              </span>
+                            )}
+                            {idea.recommendedFormat && (
+                              <span className="px-4 py-1.5 bg-sb-house/10 text-sb-house text-[1rem] font-black uppercase tracking-wider rounded-full border border-sb-house/20">
+                                {idea.recommendedFormat}
+                              </span>
+                            )}
+                          </div>
                           <h4 className="text-[1.8rem] font-black text-sb-green mt-3 leading-tight group-hover/card:text-sb-house transition-colors">
                             {idea.title}
                           </h4>
