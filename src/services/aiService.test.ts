@@ -26,7 +26,7 @@ vi.mock("openai", () => ({
   })
 }));
 
-// Claude now proxies through /api/ai/claude — mock global fetch
+// Claude now proxies through /.netlify/functions/claude — mock global fetch
 const mockFetch = vi.fn();
 beforeEach(() => {
   mockFetch.mockClear();
@@ -43,11 +43,11 @@ describe("aiService / generateContentWithEngine", () => {
     expect(result).toEqual({ success: true });
   });
 
-  it("routes to Anthropic via /api/ai/claude proxy", async () => {
+  it("routes to Anthropic via /.netlify/functions/claude proxy", async () => {
     const result = await generateContentWithEngine("test", { provider: "anthropic", apiKey: "key" });
     expect(result).toEqual({ claude: true });
     expect(mockFetch).toHaveBeenCalledWith(
-      "/api/ai/claude",
+      "/.netlify/functions/claude",
       expect.objectContaining({ method: "POST" }),
     );
   });

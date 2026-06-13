@@ -7,18 +7,6 @@ import axios from "axios";
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
-import Anthropic from "@anthropic-ai/sdk";
-
-const defaultClaudeSystem =
-  `You are Co-pilot Core — an expert brand strategy consultant and creative director for Fourdoor AI. ` +
-  `Produce precise, structured marketing output for the user's business. ` +
-  `Always populate every field; never return null or placeholder values.`;
-
-const structuredOutputTool: Anthropic.Messages.Tool = {
-  name: "structured_output",
-  description: "Return the response as a structured JSON object.",
-  input_schema: { type: "object", additionalProperties: true },
-};
 
 dotenv.config();
 
@@ -275,47 +263,6 @@ export function createApp() {
     } catch (error) {
       console.error("Webhook Processing Error:", error);
       res.status(500).send("Internal Server Error");
-    }
-  });
-
-  // Claude AI proxy — keeps the Anthropic SDK and user API key server-side only
-  app.post("/api/ai/claude", async (req, res) => {
-    const { userKey, messages, systemPrompt } = req.body as {
-      userKey: string;
-      messages: Array<{ role: "user" | "assistant"; content: string }>;
-      systemPrompt?: string;
-    };
-    if (!userKey) return res.status(400).json({ error: "Anthropic API key missing." });
-
-    try {
-      const client = new Anthropic({ apiKey: userKey });
-
-      const resp = await client.messages.create(
-        {
-          model: "claude-sonnet-4-6",
-          max_tokens: 4096,
-          system: [
-            {
-              type: "text",
-              text: systemPrompt ?? defaultClaudeSystem,
-              cache_control: { type: "ephemeral" },
-            },
-          ],
-          tools: [structuredOutputTool],
-          tool_choice: { type: "tool", name: "structured_output" },
-          messages,
-        },
-        { headers: { "anthropic-beta": "prompt-caching-2024-07-31" } },
-      );
-
-      const toolUse = resp.content.find((b) => b.type === "tool_use");
-      if (!toolUse || toolUse.type !== "tool_use") {
-        return res.status(500).json({ error: "Model did not return structured output." });
-      }
-      res.json(toolUse.input);
-    } catch (error: any) {
-      console.error("[Claude proxy]", error?.message);
-      res.status(500).json({ error: error?.message ?? "Claude API call failed." });
     }
   });
 

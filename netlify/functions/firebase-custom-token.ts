@@ -4,8 +4,16 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 
 if (!admin.apps.length) {
   const svcStr = process.env.FIREBASE_SERVICE_ACCOUNT;
+  let svc: admin.ServiceAccount | undefined;
   if (svcStr) {
-    const svc = JSON.parse(Buffer.from(svcStr, "base64").toString("utf8"));
+    try {
+      svc = JSON.parse(Buffer.from(svcStr, "base64").toString("utf8"));
+    } catch (err) {
+      console.error("[firebase-custom-token] Invalid FIREBASE_SERVICE_ACCOUNT:", err);
+    }
+  }
+
+  if (svc) {
     admin.initializeApp({ credential: admin.credential.cert(svc) });
   } else {
     // Fallback: project-only init (custom-token creation needs a service account key)
@@ -18,7 +26,12 @@ export const handler: Handler = async (event) => {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
-  const { idToken } = JSON.parse(event.body ?? "{}") as { idToken?: string };
+  let idToken: string | undefined;
+  try {
+    ({ idToken } = JSON.parse(event.body ?? "{}") as { idToken?: string });
+  } catch {
+    return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON body" }) };
+  }
   if (!idToken) {
     return { statusCode: 400, body: JSON.stringify({ error: "Missing idToken" }) };
   }
