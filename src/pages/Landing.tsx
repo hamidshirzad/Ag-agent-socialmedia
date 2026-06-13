@@ -21,12 +21,7 @@ export default function Landing() {
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
     } else {
-      const res = await signIn();
-      if (res && res.success) {
-        navigate(res.isNewUser ? "/onboarding" : "/dashboard");
-      } else if (res && res.error) {
-        setErrorMsg(res.error);
-      }
+      await signIn();
     }
   };
 
