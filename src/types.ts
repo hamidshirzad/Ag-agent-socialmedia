@@ -99,3 +99,13 @@ export interface ScoringRule {
   category: 'attribute' | 'engagement' | 'crm';
   createdAt: string;
 }
+
+export interface TeamMember {
+  id: string;
+  userId: string;
+  email: string;
+  name: string;
+  role: 'Manager' | 'Analyst' | 'Content Editor';
+  status: 'Active' | 'Pending';
+  createdAt: any;
+}

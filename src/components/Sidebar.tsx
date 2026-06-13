@@ -24,6 +24,7 @@ export function Sidebar() {
     { icon: Rocket, label: "Content Engine", h: "/content" },
     { icon: Inbox, label: "Lead Inbox", h: "/leads" },
     { icon: TrendingUp, label: "Scoring Engine", h: "/scoring" },
+    { icon: Users, label: "Team", h: "/team" },
     { icon: CreditCard, label: "Billing", h: "/billing" },
     { icon: Target, label: "Cold Outreach", h: "/outreach" },
     { icon: Calendar, label: "Calendar", h: "/calendar" },
