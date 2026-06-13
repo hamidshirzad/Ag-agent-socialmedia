@@ -70,6 +70,22 @@ service cloud.firestore {
               && data.isActive is bool;
         }
       }
+
+      // Sub-collection: Team Members
+      match /teamMembers/{memberId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidTeamMember(incoming());
+        allow delete: if isOwner(userId);
+
+        function isValidTeamMember(data) {
+          return data.userId == request.auth.uid
+              && data.email is string && data.email.size() <= 100
+              && data.name is string && data.name.size() <= 100
+              && data.role in ['Manager', 'Analyst', 'Content Editor']
+              && data.status in ['Active', 'Pending']
+              && data.keys().hasAll(['userId', 'email', 'name', 'role', 'status']);
+        }
+      }
     }
 
     // --- Posts ---

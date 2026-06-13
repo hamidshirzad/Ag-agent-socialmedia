@@ -297,7 +297,7 @@ export function createApp() {
 
     try {
       // Log all events to Firestore for audit trail
-      await db.collection("billing_events").add({
+      await targetDb.collection("billing_events").add({
         id: event.id,
         type: eventType,
         resourceId: resource.id,
@@ -315,7 +315,7 @@ export function createApp() {
           console.log(`Subscription ${resource.id} activated.`);
           // Check for 'custom_id' or 'subscriber.email' to find user
           if (resource.subscriber?.email_address) {
-             const userQuery = await db.collection("users").where("email", "==", resource.subscriber.email_address).get();
+             const userQuery = await targetDb.collection("users").where("email", "==", resource.subscriber.email_address).get();
              if (!userQuery.empty) {
                await userQuery.docs[0].ref.update({ 
                  plan: "pro", 
