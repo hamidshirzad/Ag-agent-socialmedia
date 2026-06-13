@@ -131,6 +131,20 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "attribute", "operator", "points"]
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "Collaborators or invites details in a workspace",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["Manager", "Analyst", "Content Editor"] },
+        "status": { "type": "string", "enum": ["Active", "Pending"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "name", "role", "status"]
     }
   },
   "firestore": {
@@ -141,6 +155,10 @@
     "/users/{userId}/scoringRules/{ruleId}": {
       "schema": "ScoringRule",
       "description": "Custom lead scoring rules for a user"
+    },
+    "/users/{userId}/teamMembers/{memberId}": {
+      "schema": "TeamMember",
+      "description": "Collaborators in a user's workspace"
     },
     "/posts/{postId}": {
       "schema": "Post",

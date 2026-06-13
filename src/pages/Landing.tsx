@@ -1,223 +1,435 @@
-import { motion } from "motion/react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
-import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Send, Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
+import { Zap, ArrowRight, Github, Twitter, Youtube, Linkedin, Instagram } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
 export default function Landing() {
   const { signIn, user, profile, loading } = useAuth();
   const navigate = useNavigate();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Stats counters
+  const [stats, setStats] = useState({ lightYears: 0, galaxies: 0, stars: 0 });
+  const [coords, setCoords] = useState("RA 00h 00m 00s · DEC +00° 00' 00\"");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleStart = async () => {
     if (loading) return;
+    setErrorMsg(null);
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
     } else {
-      const { isNewUser } = await signIn();
-      navigate(isNewUser ? "/onboarding" : "/dashboard");
+      const res = await signIn();
+      if (res && res.success) {
+        navigate(res.isNewUser ? "/onboarding" : "/dashboard");
+      } else if (res && res.error) {
+        setErrorMsg(res.error);
+      }
     }
   };
 
+  // Canvas Starfield Logic
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let animationFrameId: number;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
+    const resize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const CX = () => width / 2;
+    const CY = () => height / 2;
+    const NUM_STARS = 420;
+
+    const stars = Array.from({ length: NUM_STARS }, () => ({
+      x: (Math.random() - 0.5) * width * 4,
+      y: (Math.random() - 0.5) * height * 4,
+      z: Math.random() * width,
+      pz: 0,
+      hue: Math.random() < 0.15 ? 190 + Math.random() * 60 : 200 + Math.random() * 40,
+      size: Math.random() * 1.5 + 0.3,
+    }));
+
+    let mx = 0, my = 0;
+    const handleMouseMove = (e: MouseEvent) => {
+      mx = (e.clientX / width - 0.5) * 0.6;
+      my = (e.clientY / height - 0.5) * 0.6;
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+
+    let speed = 1;
+    let tick = 0;
+
+    const drawStars = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      const grad = ctx.createRadialGradient(CX(), CY(), 0, CX(), CY(), width * 0.7);
+      grad.addColorStop(0, 'rgba(13,6,40,0.0)');
+      grad.addColorStop(0.5, 'rgba(7,21,46,0.3)');
+      grad.addColorStop(1, 'rgba(0,0,15,0.7)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      const cx = CX() + mx * 30;
+      const cy = CY() + my * 30;
+
+      for (const s of stars) {
+        s.pz = s.z;
+        s.z -= speed;
+
+        if (s.z <= 0) {
+          s.x = (Math.random() - 0.5) * width * 4;
+          s.y = (Math.random() - 0.5) * height * 4;
+          s.z = width;
+          s.pz = s.z;
+        }
+
+        const sx = (s.x / s.z) * width + cx;
+        const sy = (s.y / s.z) * height + cy;
+        const psx = (s.x / s.pz) * width + cx;
+        const psy = (s.y / s.pz) * height + cy;
+
+        const depth = 1 - s.z / width;
+        const r = s.size * depth * 2.5;
+        const alpha = Math.min(1, depth * 1.4);
+
+        ctx.beginPath();
+        ctx.moveTo(psx, psy);
+        ctx.lineTo(sx, sy);
+        ctx.strokeStyle = `hsla(${s.hue},90%,85%,${alpha})`;
+        ctx.lineWidth = r;
+        ctx.stroke();
+
+        if (depth > 0.7) {
+          ctx.beginPath();
+          ctx.arc(sx, sy, r * 2, 0, Math.PI * 2);
+          ctx.fillStyle = `hsla(${s.hue},100%,90%,${(depth - 0.7) * 0.5})`;
+          ctx.fill();
+        }
+      }
+
+      const lf = ctx.createRadialGradient(cx, cy, 0, cx, cy, 200);
+      lf.addColorStop(0, 'rgba(0,229,255,0.04)');
+      lf.addColorStop(0.4, 'rgba(26,111,255,0.02)');
+      lf.addColorStop(1, 'transparent');
+      ctx.fillStyle = lf;
+      ctx.fillRect(0, 0, width, height);
+
+      tick++;
+      speed = 1.5 + Math.sin(tick * 0.008) * 1.2;
+      animationFrameId = requestAnimationFrame(drawStars);
+    };
+
+    drawStars();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, []);
+
+  // Counters Effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const duration = 2000;
+      const start = performance.now();
+      
+      const update = (now: number) => {
+        const p = Math.min((now - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
+        
+        setStats({
+          lightYears: Math.floor(ease * 93),
+          galaxies: Math.floor(ease * 2000),
+          stars: Math.floor(ease * 400)
+        });
+        
+        if (p < 1) requestAnimationFrame(update);
+      };
+      requestAnimationFrame(update);
+    }, 1800);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Coords Effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const t = Date.now() / 1000;
+      const ra_h = String(Math.floor((t / 3600) % 24)).padStart(2, '0');
+      const ra_m = String(Math.floor((t / 60) % 60)).padStart(2, '0');
+      const ra_s = String(Math.floor(t % 60)).padStart(2, '0');
+      const dec_d = String(Math.floor(Math.abs(Math.sin(t * 0.01) * 90))).padStart(2, '0');
+      const dec_m = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+      const dec_s = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+      setCoords(`RA ${ra_h}h ${ra_m}m ${ra_s}s · DEC +${dec_d}° ${dec_m}' ${dec_s}"`);
+    }, 800);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="bg-sb-cream min-h-screen">
-      {/* Navigation */}
-      <nav className="flex justify-between items-center px-12 py-6 bg-white sb-shadow-nav sticky top-0 z-50">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-sb-green rounded-full flex items-center justify-center shrink-0">
-            <Zap className="text-white w-6 h-6 fill-white" />
-          </div>
-          <span className="font-bold text-2xl tracking-sb text-sb-green uppercase">Fourdoor</span>
-          <div className="hidden md:flex items-center gap-8 ml-12 text-[1.4rem] font-bold uppercase tracking-widest">
-             <a href="#features" className="hover:text-sb-green transition-colors">Menu</a>
-             <a href="#rewards" className="hover:text-sb-green transition-colors">Growth Rewards</a>
-             <a href="#gift" className="hover:text-sb-green transition-colors">Gift Access</a>
-          </div>
-        </div>
-        <div className="flex items-center gap-6">
-          <button 
-            onClick={handleStart}
-            className="px-6 py-2 border border-black rounded-full text-[1.4rem] font-bold sb-button-active"
-          >
-            Sign in
-          </button>
-          <button 
-            onClick={handleStart}
-            className="px-6 py-2 bg-black text-white rounded-full text-[1.4rem] font-bold sb-button-active"
-          >
-            Join now
-          </button>
-        </div>
-      </nav>
+    <div className="relative min-h-screen bg-[#00000f] text-white font-['Rajdhani'] overflow-hidden selection:bg-[#00e5ff] selection:text-black">
+      {/* Custom Styles */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap');
+        
+        .deep-nebula {
+          position: fixed;
+          border-radius: 50%;
+          filter: blur(80px);
+          mix-blend-mode: screen;
+          pointer-events: none;
+          z-index: 1;
+          animation: nebula-drift 18s ease-in-out infinite alternate;
+        }
+        @keyframes nebula-drift {
+          from { transform: translate(0, 0) scale(1); }
+          to   { transform: translate(40px, 30px) scale(1.08); }
+        }
+        .ring-rotate { animation: ring-rotate 8s linear infinite; }
+        .ring-rotate-reverse { animation: ring-rotate 14s linear infinite reverse; }
+        @keyframes ring-rotate {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        .scanline {
+          position: fixed;
+          top: 0; left: 0; right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, transparent, rgba(0,229,255,0.6), transparent);
+          z-index: 3;
+          animation: scan 6s linear infinite;
+          box-shadow: 0 0 20px rgba(0,229,255,0.4);
+        }
+        @keyframes scan {
+          from { top: -10px; }
+          to   { top: 100%; }
+        }
+        .grid-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 2;
+          background-image:
+            linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+          background-size: 60px 60px;
+          perspective: 600px;
+          animation: grid-breathe 8s ease-in-out infinite;
+        }
+        @keyframes grid-breathe {
+          0%, 100% { opacity: 0.6; }
+          50%       { opacity: 1; }
+        }
+      `}</style>
 
-      {/* Hero Section */}
-      <header className="grid grid-cols-1 lg:grid-cols-2 bg-sb-green text-white min-h-[60rem]">
-        <div className="flex flex-col justify-center p-12 lg:p-24 bg-sb-house order-2 lg:order-1">
+      {/* Canvas Layer */}
+      <canvas ref={canvasRef} className="fixed inset-0 z-0" />
+
+      {/* Nebula Layers */}
+      <div className="deep-nebula w-[700px] h-[500px] -top-[100px] -left-[150px] bg-[radial-gradient(ellipse,rgba(123,47,255,0.35)_0%,transparent_70%)] [animation-duration:22s]" />
+      <div className="deep-nebula w-[600px] h-[400px] -bottom-[120px] -right-[100px] bg-[radial-gradient(ellipse,rgba(26,111,255,0.3)_0%,transparent_70%)] [animation-duration:17s] [animation-direction:alternate-reverse]" />
+      <div className="deep-nebula w-[400px] h-[300px] top-[40%] left-[55%] bg-[radial-gradient(ellipse,rgba(0,229,255,0.18)_0%,transparent_70%)] [animation-duration:25s]" />
+      <div className="deep-nebula w-[500px] h-[350px] top-[10%] right-[20%] bg-[radial-gradient(ellipse,rgba(255,80,80,0.12)_0%,transparent_70%)] [animation-duration:20s] [animation-direction:alternate-reverse]" />
+
+      <div className="grid-overlay" />
+      <div className="scanline" />
+
+      {/* UI Elements */}
+      <div className="fixed top-6 left-6 z-50 flex items-center gap-4">
+        <Zap className="text-[#00e5ff] w-8 h-8 filter drop-shadow-[0_0_10px_rgba(0,229,255,0.5)]" />
+        <span className="font-['Orbitron'] font-bold text-xl tracking-[0.2em] text-white">FOURDOOR</span>
+      </div>
+
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-4">
+        <button 
+          onClick={handleStart}
+          className="px-6 py-2 border border-[#00e5ff]/40 rounded-[3px] text-[0.7rem] font-bold tracking-[0.2em] font-['Orbitron'] text-[#00e5ff] hover:bg-[#00e5ff]/10 hover:border-[#00e5ff] transition-all"
+        >
+          {user ? "DASHBOARD" : "ACCESS TERMINAL"}
+        </button>
+      </div>
+
+      {/* Main Content Stage */}
+      <main className="relative z-10 w-full h-screen flex flex-col items-center justify-center">
+        {/* Animated Orb */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.4 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-[180px] h-[180px] rounded-full mb-12 bg-[radial-gradient(circle_at_35%_35%,rgba(255,255,255,0.9)_0%,rgba(0,229,255,0.8)_25%,rgba(26,111,255,0.6)_55%,rgba(123,47,255,0.4)_80%,transparent_100%)] shadow-[0_0_60px_rgba(0,229,255,0.5),0_0_120px_rgba(26,111,255,0.3),0_0_200px_rgba(123,47,255,0.2)]"
+        >
+          {/* Inner pulsating glow handled by animate in motion? No, keep CSS pulse for better performance */}
+          <div className="absolute inset-0 rounded-full animate-[orb-pulse_4s_ease-in-out_infinite]" />
+          <div className="absolute inset-[-20px] rounded-full border border-[#00e5ff]/25 ring-rotate" />
+          <div className="absolute inset-[-40px] rounded-full border border-dashed border-[#7b2fff]/20 ring-rotate-reverse" />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 1 }}
+          className="font-['Orbitron'] text-[0.7rem] font-normal tracking-[0.4em] text-[#00e5ff] uppercase mb-5"
+        >
+          Sector 7 — Deep Field Observation
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9, duration: 1 }}
+          className="font-['Orbitron'] text-[clamp(2.8rem,7vw,6rem)] font-black leading-[0.95] tracking-[-0.02em] text-center mb-8 bg-[linear-gradient(135deg,#ffffff_0%,#a8d8ff_40%,#00e5ff_70%,#7b2fff_100%)] bg-clip-text text-transparent"
+        >
+          INTO THE<br />
+          <span className="inline-block filter drop-shadow-[0_0_20px_rgba(0,229,255,0.6)]">INFINITE</span>
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2, duration: 1 }}
+          className="text-[clamp(0.95rem,2vw,1.2rem)] font-light tracking-[0.12em] text-[#e8f4ff]/60 text-center max-w-[520px] mb-10 leading-[1.7]"
+        >
+          Traveling at the speed of light through 93 billion light-years<br />
+          of observable universe — and still counting.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5, duration: 1 }}
+          className="w-[120px] h-[1px] bg-[linear-gradient(90deg,transparent,#00e5ff,transparent)] mb-9"
+        />
+
+        {/* Stats Row */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.7, duration: 1 }}
+          className="flex gap-14 mb-12"
+        >
+          {[
+            { value: stats.lightYears, label: "Light Years", suffix: "B" },
+            { value: stats.galaxies, label: "Galaxies Mapped", suffix: "+" },
+            { value: stats.stars, label: "Stars Catalogued", suffix: "T" }
+          ].map((stat, i) => (
+            <div key={i} className="text-center">
+              <span className="block font-['Orbitron'] text-3xl md:text-5xl font-bold text-[#00e5ff] drop-shadow-[0_0_20px_rgba(0,229,255,0.5)]">
+                {stat.value.toLocaleString()}{stat.suffix}
+              </span>
+              <span className="block text-[0.7rem] tracking-[0.25em] uppercase text-[#e8f4ff]/40 mt-1">
+                {stat.label}
+              </span>
+            </div>
+          ))}
+        </motion.div>
+
+        {/* Action Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2, duration: 1 }}
+          className="flex gap-4"
+        >
+          <button 
+            onClick={handleStart}
+            className="font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-8 py-3.5 rounded-[3px] bg-[linear-gradient(135deg,#1a6fff,#00e5ff)] text-[#00000f] shadow-[0_0_30px_rgba(0,229,255,0.3)] hover:shadow-[0_0_60px_rgba(0,229,255,0.6)] hover:-translate-y-0.5 transition-all"
+          >
+            Launch Mission
+          </button>
+          <button className="font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-8 py-3.5 rounded-[3px] bg-transparent text-[#00e5ff] border border-[#00e5ff]/40 hover:bg-[#00e5ff]/10 hover:border-[#00e5ff] hover:-translate-y-0.5 transition-all">
+            Explore Data
+          </button>
+        </motion.div>
+      </main>
+
+      {/* Decorative Borders */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2, duration: 1 }} className="fixed top-6 left-6 w-14 h-14 border-t border-l border-[#00e5ff]/50 pointer-events-none" />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2, duration: 1 }} className="fixed top-6 right-6 w-14 h-14 border-t border-r border-[#00e5ff]/50 pointer-events-none" />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2, duration: 1 }} className="fixed bottom-6 left-6 w-14 h-14 border-b border-l border-[#00e5ff]/50 pointer-events-none" />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2, duration: 1 }} className="fixed bottom-6 right-6 w-14 h-14 border-b border-r border-[#00e5ff]/50 pointer-events-none" />
+
+      {/* Live Coords Bottom */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.4, duration: 1 }}
+        className="fixed bottom-7 left-1/2 -translate-x-1/2 font-['Orbitron'] text-[0.55rem] tracking-[0.2em] text-[#00e5ff]/30 z-10"
+      >
+        {coords}
+      </motion.div>
+
+      {/* Error Terminal Dialog */}
+      <AnimatePresence>
+        {errorMsg && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/85 backdrop-blur-md"
           >
-            <h1 className="text-[clamp(3.5rem,6vw,5.8rem)] leading-[1.2] font-semibold mb-8">
-              Autonomous marketing <br /> starts here.
-            </h1>
-            <p className="max-w-lg text-[1.9rem] leading-relaxed mb-12 opacity-80">
-              Join Fourdoor Growth Engine™ today and start automating your social distribution and lead generation automatically.
-            </p>
-            <button 
-              onClick={handleStart}
-              className="px-8 py-3 border border-white rounded-full text-[1.6rem] font-bold sb-button-active hover:bg-white hover:text-sb-house"
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#040924] border-2 border-[#ff3b3b]/60 rounded-lg p-8 max-w-[500px] w-full shadow-[0_0_50px_rgba(255,59,59,0.3)] text-[#e8f4ff] relative"
             >
-              Learn more
-            </button>
-          </motion.div>
-        </div>
-        <div className="bg-[#d4e9e2] flex items-center justify-center p-12 order-1 lg:order-2">
-           <motion.div 
-             initial={{ opacity: 0, x: 20 }}
-             animate={{ opacity: 1, x: 0 }}
-             className="relative w-full max-w-lg aspect-square bg-sb-green/10 rounded-full flex items-center justify-center"
-           >
-              <Zap className="w-48 h-48 text-sb-green animate-pulse" />
-           </motion.div>
-        </div>
-      </header>
-
-      {/* Intro Section */}
-      <section className="py-24 px-12 max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-24">
-        <div className="flex-1 space-y-8">
-          <h2 className="text-[2.8rem] font-semibold text-sb-green uppercase">Intelligence as a service.</h2>
-          <p className="text-[1.6rem] leading-relaxed text-black/70">
-            Our neural engine doesn't just post content; it learns your brand voice, identifies high-intent targets, and scales your footprint while you focus on closing.
-          </p>
-          <button 
-            onClick={handleStart}
-            className="px-8 py-3 bg-sb-accent text-white rounded-full text-[1.6rem] font-bold sb-button-active shadow-lg"
-          >
-            Explore our platform
-          </button>
-        </div>
-        <div className="flex-1 grid grid-cols-2 gap-8">
-           {[
-             { label: "Content Gen", icon: CheckCircle2 },
-             { label: "Lead Scoring", icon: Zap },
-             { label: "Auto Booking", icon: BarChart3 },
-             { label: "Distribution", icon: Send }
-           ].map((item, i) => (
-             <div key={i} className="bg-white p-8 rounded-[12px] sb-shadow-card flex flex-col items-center text-center gap-4 hover:-translate-y-1 transition-all">
-                <item.icon className="text-sb-green w-10 h-10" />
-                <span className="font-bold uppercase text-[1.2rem] tracking-wider">{item.label}</span>
-             </div>
-           ))}
-        </div>
-      </section>
-
-      {/* Pricing - Rewards Experience */}
-      <section id="pricing" className="bg-sb-ceramic py-32 px-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-24">
-            <h2 className="font-serif italic text-sb-green text-[5rem] mb-4">Choose your tier.</h2>
-            <p className="text-[1.6rem] text-black/60 uppercase tracking-widest font-bold">Free growth is just the beginning.</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {[
-              { name: "Starter", price: "29", info: "Perfect for builders." },
-              { name: "Pro", price: "79", info: "For established teams.", featured: true },
-              { name: "Agency", price: "199", info: "Scalable enterprise." }
-            ].map((plan, i) => (
-              <div key={i} className={cn(
-                "p-12 rounded-[12px] flex flex-col text-center sb-shadow-card transition-all hover:scale-[1.02]",
-                plan.featured ? "bg-sb-house text-white" : "bg-white text-black"
-              )}>
-                <h3 className="text-[2.4rem] font-bold mb-2 italic font-serif">{plan.name}</h3>
-                <div className="flex items-baseline justify-center gap-1 mb-8">
-                  <span className="text-[4.5rem] font-black">€{plan.price}</span>
-                  <span className="opacity-50">/mo</span>
+              <h3 className="font-['Orbitron'] text-lg font-bold tracking-[0.25em] text-[#ff3b3b] uppercase mb-4 flex items-center gap-3">
+                ⚠️ TRANSMISSION FAILURE
+              </h3>
+              
+              <div className="text-[0.9rem] leading-[1.6] tracking-wide text-[#e8f4ff]/80 mb-6 space-y-4 font-sans">
+                <p>{errorMsg}</p>
+                
+                <div className="p-4 bg-red-950/40 border border-[#ff3b3b]/20 rounded text-[0.8rem] font-mono text-[#ff8080]">
+                  <span className="font-bold text-white uppercase block mb-1">Diagnosis:</span>
+                  The Google AI Studio container runs inside a sandboxed cross-origin iframe. If your browser blocks popups or restricts third-party storage, sign-in flows will be blocked.
                 </div>
-                <p className="mb-12 opacity-80 font-medium">{plan.info}</p>
-                <ul className="text-left space-y-4 mb-16 grow text-[1.4rem]">
-                  <li className="flex gap-3 items-center"><CheckCircle2 className="w-4 h-4 text-sb-accent" /> AI Content Engine</li>
-                  <li className="flex gap-3 items-center"><CheckCircle2 className="w-4 h-4 text-sb-accent" /> Lead Intelligence</li>
-                  <li className="flex gap-3 items-center"><CheckCircle2 className="w-4 h-4 text-sb-accent" /> Multi-Relay Post</li>
-                </ul>
-                <button 
-                  onClick={handleStart}
-                  className={cn(
-                    "py-4 rounded-full font-bold text-[1.6rem] sb-button-active",
-                    plan.featured ? "bg-white text-sb-house" : "bg-sb-accent text-white"
-                  )}
+              </div>
+
+              <div className="flex flex-col gap-3 font-sans">
+                <button
+                  onClick={() => {
+                    window.open(window.location.href, "_blank");
+                  }}
+                  className="w-full font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-5 py-3 rounded bg-[linear-gradient(135deg,#ff3b3b,#ff8080)] text-black hover:shadow-[0_0_20px_rgba(255,59,59,0.5)] transition-all cursor-pointer text-center"
                 >
-                  Get started
+                  🚀 Launch in New Tab (Recommended)
+                </button>
+                
+                <button
+                  onClick={() => setErrorMsg(null)}
+                  className="w-full font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-5 py-3 rounded border border-white/20 hover:bg-white/5 transition-all cursor-pointer text-center text-white/75"
+                >
+                  Dismiss Alert
                 </button>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Footer */}
-      <footer className="bg-sb-house text-white py-32 px-12">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-24">
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                <Zap size={24} className="text-sb-house fill-sb-house" />
-              </div>
-              <span className="font-bold text-3xl tracking-sb uppercase">FOURDOOR</span>
-            </div>
-            <p className="max-w-sm text-white/60 text-[1.4rem] leading-relaxed">
-              Autonomous marketing for the next generation of builders. Scale your impact without scaling your team.
-            </p>
-            <div className="flex gap-6 mt-10">
-              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
-                <Twitter size={18} className="text-white/40 group-hover:text-white transition-colors" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
-                <Instagram size={18} className="text-white/40 group-hover:text-white transition-colors" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
-                <Linkedin size={18} className="text-white/40 group-hover:text-white transition-colors" />
-              </a>
-              <a href="#" className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-all group">
-                <Youtube size={18} className="text-white/40 group-hover:text-white transition-colors" />
-              </a>
-            </div>
-          </div>
-          <div>
-            <h4 className="font-bold text-[1.6rem] mb-12 uppercase tracking-loose">Platform</h4>
-            <div className="flex flex-col gap-6 text-white/50 text-[1.4rem] font-medium transition-all">
-              <a href="#" className="hover:text-white">Content Engine</a>
-              <a href="#" className="hover:text-white">Lead Inbox</a>
-              <a href="#" className="hover:text-white">Distribution</a>
-              <a href="#" className="hover:text-white">Analytics</a>
-            </div>
-          </div>
-          <div>
-            <h4 className="font-bold text-[1.6rem] mb-12 uppercase tracking-loose">Company</h4>
-            <div className="flex flex-col gap-6 text-white/50 text-[1.4rem] font-medium transition-all">
-              <a href="#" className="hover:text-white">About Us</a>
-              <a href="#" className="hover:text-white">Careers</a>
-              <a href="#" className="hover:text-white">Contact</a>
-              <a href="#" className="hover:text-white">Privacy</a>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto mt-32 pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-8">
-           <p className="text-[1.2rem] text-white/40">© 2026 Fourdoor Coffee & Code Co. All rights reserved.</p>
-           <div className="flex gap-12 text-sb-gold font-bold text-[1.3rem]">
-              <a href="#" className="hover:underline">Terms of Service</a>
-              <a href="#" className="hover:underline">Legal</a>
-           </div>
-        </div>
-      </footer>
-
-      {/* Signature Floating Frap Button */}
-      <button 
-        onClick={handleStart}
-        className="fixed bottom-12 right-12 w-[5.6rem] h-[5.6rem] bg-sb-accent rounded-full flex items-center justify-center text-white sb-shadow-frap sb-button-active z-[60]"
-      >
-        <Zap className="fill-white" />
-      </button>
+      {/* Orb Pulse Keyframes */}
+      <style>{`
+        @keyframes orb-pulse {
+          0%, 100% { box-shadow: 0 0 60px rgba(0,229,255,0.5), 0 0 120px rgba(26,111,255,0.3), 0 0 200px rgba(123,47,255,0.2); }
+          50%       { box-shadow: 0 0 90px rgba(0,229,255,0.8), 0 0 180px rgba(26,111,255,0.5), 0 0 280px rgba(123,47,255,0.35); }
+        }
+      `}</style>
     </div>
   );
 }
+

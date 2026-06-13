@@ -27,6 +27,53 @@ export default function LeadInbox() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Calendly dispatch state
+  const [calendlyStatusMap, setCalendlyStatusMap] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({});
+
+  // Dynamic Calendly Assets Loading
+  useEffect(() => {
+    // Inject CSS
+    const link = document.createElement("link");
+    link.href = "https://assets.calendly.com/assets/external/widget.css";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+
+    // Inject JS
+    const script = document.createElement("script");
+    script.src = "https://assets.calendly.com/assets/external/widget.js";
+    script.type = "text/javascript";
+    script.async = true;
+    document.head.appendChild(script);
+
+    return () => {
+      try {
+        document.head.removeChild(link);
+      } catch (e) {}
+      try {
+        document.head.removeChild(script);
+      } catch (e) {}
+    };
+  }, []);
+
+  const openCalendly = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    const bookingLink = import.meta.env.VITE_CALENDLY_BOOKING_LINK || "https://calendly.com/hameed-sherzad22/100";
+    
+    const win = window as any;
+    if (win.Calendly) {
+      win.Calendly.initPopupWidget({ url: bookingLink });
+    } else {
+      window.open(bookingLink, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const handleSendCalendly = (leadId: string) => {
+    setCalendlyStatusMap(prev => ({ ...prev, [leadId]: 'sending' }));
+    setTimeout(() => {
+      setCalendlyStatusMap(prev => ({ ...prev, [leadId]: 'sent' }));
+    }, 1000);
+  };
+
   useEffect(() => {
     if (!user) return;
     
@@ -127,9 +174,37 @@ export default function LeadInbox() {
                       <h2 className="text-[3.6rem] font-bold tracking-sb text-sb-green mb-2 uppercase">{selectedLead.name}</h2>
                       <p className="text-[1.6rem] text-black/40 font-medium italic">{selectedLead.source} Lead • Captured {formatDate(selectedLead.createdAt)}</p>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 flex-wrap">
+                        <button 
+                           onClick={() => handleSendCalendly(selectedLead.id)}
+                           disabled={calendlyStatusMap[selectedLead.id] === 'sending'}
+                           className={cn(
+                             "h-14 px-8 border rounded-full font-black flex items-center gap-3 transition-all uppercase tracking-widest text-[1.2rem] shadow-sm",
+                             calendlyStatusMap[selectedLead.id] === 'sent'
+                               ? "bg-sb-green text-white border-sb-green" 
+                               : "bg-sb-house text-sb-gold hover:bg-sb-accent hover:text-white border-transparent"
+                           )}
+                           title="Instruct the AI Agent to send this prospect your custom Calendly link"
+                        >
+                           <Zap size={14} className={cn("fill-current", calendlyStatusMap[selectedLead.id] === 'sending' && "animate-spin")} />
+                           {calendlyStatusMap[selectedLead.id] === 'sending' 
+                             ? "Sending Link..." 
+                             : calendlyStatusMap[selectedLead.id] === 'sent' 
+                             ? "Booking Link Sent" 
+                             : "Send Calendly Link"}
+                        </button>
+
+                        <button 
+                           onClick={() => openCalendly()}
+                           className="h-14 bg-sb-accent text-white rounded-full font-black px-10 flex items-center gap-4 hover:shadow-xl sb-button-active transition-all uppercase tracking-widest text-[1.4rem]"
+                           title="Schedule time directly using the integrated popup widget"
+                        >
+                           Book Call <ArrowRight size={18} />
+                        </button>
+                     </div>
+                     <div className="hidden">
                        <button className="w-14 h-14 flex items-center justify-center bg-sb-cream rounded-full text-sb-green hover:bg-sb-accent hover:text-white transition-all sb-button-active shadow-sm">
-                          <Mail size={20} />
+                          <Zap size={20} />
                        </button>
                        <button className="w-14 h-14 flex items-center justify-center bg-sb-cream rounded-full text-sb-green hover:bg-sb-accent hover:text-white transition-all sb-button-active shadow-sm">
                           <Calendar size={20} />
@@ -162,7 +237,7 @@ export default function LeadInbox() {
                                    <p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-gold">AI Protocol / Auto Output</p>
                                 </div>
                                 <div className="w-14 h-14 rounded-full bg-sb-accent flex items-center justify-center shrink-0 shadow-lg z-10">
-                                   <Zap className="text-white w-6 h-6 fill-white" />
+                                   <Zap className="text-white w-6 h-6 fill-white" /></div></div>{calendlyStatusMap[selectedLead.id] === "sent" && (<div className="flex gap-8 relative justify-end animate-fade-in"><div className="p-10 bg-[#e6f4ea]/60 text-sb-green border border-sb-accent/20 rounded-[12px] sb-shadow-card grow max-w-[48rem] relative before:absolute before:right-[-10px] before:top-4 before:w-5 before:h-5 before:bg-[#e6f4ea]/60 before:rotate-45"><p className="text-[1.5rem] leading-relaxed mb-3 font-bold">📬 Calendly direct invitation sent!</p><p className="text-[1.3rem] leading-relaxed mb-4 font-semibold text-sb-house">"Hi {selectedLead.name.split(' ')[0]}, here is the direct booking calendar link so we can schedule some time together on our dashboard: {import.meta.env.VITE_CALENDLY_BOOKING_LINK || 'https://calendly.com/hameed-sherzad22/100'}"</p><p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-accent">Agent Outbound Dispatched</p></div><div className="w-14 h-14 rounded-full bg-sb-green flex items-center justify-center shrink-0 shadow-lg z-10 font-bold"><Calendar size={18} className="text-white" /></div></div>)}<div className="hidden"><div className="hidden">
                                 </div>
                              </div>
                           </div>

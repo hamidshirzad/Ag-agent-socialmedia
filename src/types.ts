@@ -36,6 +36,8 @@ export interface Post {
   mediaUrl?: string;
   scheduledAt: any; // Firestore Timestamp or ISO String
   status: 'draft' | 'scheduled' | 'posted';
+  autoReply?: boolean;
+  agentEngagement?: boolean;
   createdAt: string;
   metrics?: {
     views: number;
@@ -94,4 +96,14 @@ export interface ScoringRule {
   isActive: boolean;
   category: 'attribute' | 'engagement' | 'crm';
   createdAt: string;
+}
+
+export interface TeamMember {
+  id: string;
+  userId: string;
+  email: string;
+  name: string;
+  role: 'Manager' | 'Analyst' | 'Content Editor';
+  status: 'Active' | 'Pending';
+  createdAt: any;
 }

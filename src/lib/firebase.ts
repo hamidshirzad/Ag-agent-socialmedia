@@ -12,6 +12,10 @@ import firebaseConfig from "../../firebase-applet-config.json";
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope("https://www.googleapis.com/auth/calendar");
 
 export enum OperationType {
   CREATE = 'create',
@@ -55,8 +59,10 @@ async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn("[Firebase] The client is offline. Inside restricted sandbox or iframe environments, Firestore network endpoints may be blocked. This is normal and doesn't necessarily indicate a configuration error.");
+    } else {
+      console.warn("[Firebase] Initial connection check returned an error. This is normal if database rules block requests before sign-in:", error);
     }
   }
 }
