@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Sidebar } from "../components/Sidebar";
+import PageMeta from "../components/PageMeta";
 import { useAuth } from "../contexts/AuthContext";
 import { 
   CreditCard, 
@@ -75,6 +76,7 @@ export default function Billing() {
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
+      <PageMeta title="Billing" description="Manage your Fourdoor AI subscription and usage." path="/billing" />
       <Sidebar />
       
       <main className="flex-1 p-12 lg:p-24 overflow-y-auto">
