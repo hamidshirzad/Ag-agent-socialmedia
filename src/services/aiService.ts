@@ -38,11 +38,11 @@ async function callGemini(prompt: string, userKey?: string) {
   return JSON.parse(response.text || "{}");
 }
 
-// Claude runs server-side via the /api/ai/claude proxy to keep the API key out of the browser.
+// Claude runs server-side via a Netlify Function to keep the API key out of the browser.
 async function callClaude(prompt: string, systemPrompt?: string, userKey?: string) {
   if (!userKey) throw new Error("Anthropic API Key missing. Please add it in Settings.");
 
-  const res = await fetch("/api/ai/claude", {
+  const res = await fetch("/.netlify/functions/claude", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

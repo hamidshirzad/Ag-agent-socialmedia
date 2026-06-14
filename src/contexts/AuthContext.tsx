@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { signInWithCustomToken, signOut as firebaseSignOut, type User } from "firebase/auth";
-import { auth, db } from "../lib/firebase";
+import { auth, db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import type { UserProfile } from "../types";
 
@@ -37,7 +37,7 @@ async function syncToFirestore(
 ): Promise<{ profile: UserProfile; isNewUser: boolean }> {
   const uid     = fbUser.uid;
   const userRef = doc(db, "users", uid);
-  const snap    = await getDoc(userRef);
+  const snap    = await getDoc(userRef).catch(error => handleFirestoreError(error, OperationType.GET, userRef.path));
 
   if (!snap.exists()) {
     const newProfile: Partial<UserProfile> = {
@@ -48,7 +48,7 @@ async function syncToFirestore(
       onboardingComplete: false,
       createdAt: new Date().toISOString(),
     };
-    await setDoc(userRef, newProfile);
+    await setDoc(userRef, newProfile).catch(error => handleFirestoreError(error, OperationType.CREATE, userRef.path));
     return { profile: { id: uid, ...newProfile } as UserProfile, isNewUser: true };
   }
 
@@ -78,21 +78,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Skip if Firebase is already signed in (signIn() handled it already)
-    if (auth.currentUser) {
-      setLoading(false);
-      return;
-    }
-
     const restore = async () => {
       try {
-        const claims  = await getIdTokenClaims();
-        const idToken = claims?.__raw;
-        if (!idToken) throw new Error("No ID token");
+        let fbUser = auth.currentUser;
 
-        const firebaseToken = await getFirebaseCustomToken(idToken);
-        const credential    = await signInWithCustomToken(auth, firebaseToken);
-        const fbUser        = credential.user;
+        if (!fbUser) {
+          const claims  = await getIdTokenClaims();
+          const idToken = claims?.__raw;
+          if (!idToken) throw new Error("No ID token");
+
+          const firebaseToken = await getFirebaseCustomToken(idToken);
+          const credential    = await signInWithCustomToken(auth, firebaseToken);
+          fbUser              = credential.user;
+        }
 
         const { profile: prof } = await syncToFirestore(
           fbUser,
@@ -114,29 +112,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (): Promise<{ isNewUser: boolean }> => {
     await loginWithPopup();
-    try {
-      const claims  = await getIdTokenClaims();
-      const idToken = claims?.__raw;
-      if (!idToken) throw new Error("No ID token after login");
 
-      const firebaseToken = await getFirebaseCustomToken(idToken);
-      const credential    = await signInWithCustomToken(auth, firebaseToken);
-      const fbUser        = credential.user;
+    const claims  = await getIdTokenClaims();
+    const idToken = claims?.__raw;
+    if (!idToken) throw new Error("No ID token after login");
 
-      const { profile: prof, isNewUser } = await syncToFirestore(
-        fbUser,
-        auth0User?.email ?? "",
-        auth0User?.name  ?? ""
-      );
+    const firebaseToken = await getFirebaseCustomToken(idToken);
+    const credential    = await signInWithCustomToken(auth, firebaseToken);
+    const fbUser        = credential.user;
 
-      setFirebaseUser(fbUser);
-      setProfile(prof);
-      setLoading(false);
-      return { isNewUser };
-    } catch (err) {
-      console.error("[Auth] Sign-in sync failed:", err);
-      return { isNewUser: false };
-    }
+    const { profile: prof, isNewUser } = await syncToFirestore(
+      fbUser,
+      (claims?.email as string | undefined) ?? "",
+      (claims?.name  as string | undefined) ?? ""
+    );
+
+    setFirebaseUser(fbUser);
+    setProfile(prof);
+    setLoading(false);
+    return { isNewUser };
   };
 
   const logout = async () => {
@@ -148,12 +142,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = async () => {
     if (!firebaseUser) return;
-    try {
-      const snap = await getDoc(doc(db, "users", firebaseUser.uid));
-      if (snap.exists()) setProfile({ id: firebaseUser.uid, ...snap.data() } as UserProfile);
-    } catch (err) {
-      console.error("[Auth] Profile refresh failed:", err);
-    }
+    const userRef = doc(db, "users", firebaseUser.uid);
+    const snap = await getDoc(userRef).catch(error => handleFirestoreError(error, OperationType.GET, userRef.path));
+    if (snap.exists()) setProfile({ id: firebaseUser.uid, ...snap.data() } as UserProfile);
   };
 
   return (
