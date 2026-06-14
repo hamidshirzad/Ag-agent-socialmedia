@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { useAuth } from "../contexts/AuthContext";
 import { 
@@ -14,6 +14,9 @@ import {
 import { cn } from "../lib/utils";
 import { motion } from "motion/react";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+
+const STRIPE_BUY_BUTTON_ID = "buy_btn_1TiCDDFFlyQJmhYsStGMp1fX";
+const STRIPE_PUBLISHABLE_KEY = "pk_live_51OfDuBFFlyQJmhYsiSrtcyTp1AIdjTSkBtToM3xaoa95YDnSE1LGmtYpd9IBLv0ESCKnVAuMhXscb2M3g9CGPs8J00Sfg64306";
 
 const PLANS = [
   {
@@ -66,31 +69,12 @@ const PLANS = [
 export default function Billing() {
   const { profile } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
 
   const paypalOptions = {
     clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || "test",
     intent: "subscription",
     vault: true,
-  };
-
-  const handleStripeCheckout = async (planId: string) => {
-    if (!profile?.id) return;
-    setCheckoutLoading(planId);
-    try {
-      const response = await fetch("/api/billing/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: profile.id, plan: planId }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to start checkout");
-      window.location.href = data.url;
-    } catch (error: any) {
-      alert(error.message || "Failed to start Stripe checkout");
-      setCheckoutLoading(null);
-    }
   };
 
   const handleManageBilling = async () => {
@@ -202,16 +186,10 @@ export default function Billing() {
 
                 {selectedPlan === plan.id ? (
                   <div className="space-y-4">
-                    <button
-                      onClick={() => handleStripeCheckout(plan.id)}
-                      disabled={checkoutLoading === plan.id}
-                      className={cn(
-                        "w-full py-6 rounded-full font-black uppercase tracking-[0.15em] text-[1.4rem] flex items-center justify-center gap-4 transition-all sb-button-active shadow-sm disabled:opacity-50",
-                        plan.featured ? "bg-sb-gold text-sb-house hover:bg-sb-house hover:text-white" : "bg-sb-house text-white hover:bg-sb-green"
-                      )}
-                    >
-                      {checkoutLoading === plan.id ? "Redirecting..." : "Subscribe with Stripe"} <ArrowRight size={18} />
-                    </button>
+                    {createElement("stripe-buy-button", {
+                      "buy-button-id": STRIPE_BUY_BUTTON_ID,
+                      "publishable-key": STRIPE_PUBLISHABLE_KEY,
+                    })}
                     <PayPalScriptProvider options={paypalOptions as any}>
                       <PayPalButtons
                         style={{ layout: "vertical", shape: "pill", label: "subscribe" }}
