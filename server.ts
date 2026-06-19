@@ -216,7 +216,25 @@ export function createApp() {
 
     } catch (error: any) {
       console.error(`OAuth callback error for ${platform}:`, error.response?.data || error.message);
-      res.status(500).send(`Authentication failed: ${error.message}`);
+      const errorMessage = JSON.stringify(error.message || "Authentication failed");
+      res.status(500).send(`
+        <html>
+          <body style="background: #111; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
+            <div style="text-align: center;">
+              <h2 style="color: #FF5555;">Neural Link Failed</h2>
+              <p>Authentication with ${platform} could not be completed.</p>
+              <script>
+                if (window.opener) {
+                  window.opener.postMessage({ type: 'OAUTH_AUTH_FAILURE', platform: '${platform}', error: ${errorMessage} }, '*');
+                  setTimeout(() => window.close(), 1500);
+                } else {
+                  window.location.href = '/settings';
+                }
+              </script>
+            </div>
+          </body>
+        </html>
+      `);
     }
   });
 

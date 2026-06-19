@@ -76,11 +76,14 @@ export default function Settings() {
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
         console.log(`Relay synchronized for platform: ${event.data.platform}`);
         refreshProfile();
+      } else if (event.data?.type === 'OAUTH_AUTH_FAILURE') {
+        console.error(`OAuth failure for platform: ${event.data.platform}`, event.data.error);
+        toast.error(`Failed to connect ${event.data.platform}. Please try again.`);
       }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [refreshProfile]);
+  }, [refreshProfile, toast]);
 
   const handleDisconnect = async (platform: string) => {
      if (!profile?.id) return;
