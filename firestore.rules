@@ -37,13 +37,12 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow create: if isOwner(userId) && isValidUser(incoming());
-      allow update: if isOwner(userId) && isValidUser(incoming()) && (
-        // Action: Profile Update during onboarding or settings
-        (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'company', 'niche', 'goals', 'onboardingComplete', 'socialAccounts', 'apiKeys', 'avatarUrl'])) ||
-        // Action: Plan Sync
-        (incoming().diff(existing()).affectedKeys().hasOnly(['plan', 'subscriptionStatus', 'paypalSubscriptionId']))
-      ) && (
-        incoming().email == existing().email && 
+      // Plan/subscriptionStatus/paypalSubscriptionId are server-managed only (Admin SDK via
+      // the verified PayPal webhook or the dev-upgrade endpoint in server.ts) and are
+      // intentionally excluded from this client-writable key set to prevent plan bypass.
+      allow update: if isOwner(userId) && isValidUser(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'company', 'niche', 'goals', 'onboardingComplete', 'socialAccounts', 'apiKeys', 'avatarUrl']) && (
+        incoming().email == existing().email &&
         incoming().createdAt == existing().createdAt
       );
 

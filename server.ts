@@ -296,6 +296,32 @@ export function createApp() {
     }
   });
 
+  // Dev-only plan simulation — lets a signed-in user preview the Agency workspace
+  // without a real PayPal subscription. Writes via the Admin SDK (bypasses Firestore
+  // rules) and is hard-disabled outside development so it can never substitute for
+  // the real upgrade path (the PayPal webhook above).
+  app.post("/api/billing/dev-upgrade", async (req, res) => {
+    if (process.env.NODE_ENV === "production") {
+      return res.status(403).json({ error: "Plan upgrades require an active subscription." });
+    }
+
+    const authHeader = req.headers.authorization;
+    const idToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+    if (!idToken) return res.status(401).json({ error: "Missing ID token." });
+
+    try {
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      await targetDb.collection("users").doc(decoded.uid).update({
+        plan: "agency",
+        subscriptionStatus: "active",
+      });
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Dev upgrade failed:", error);
+      res.status(401).json({ error: "Invalid ID token." });
+    }
+  });
+
   // Claude AI proxy — keeps the Anthropic SDK and user API key server-side only
   app.post("/api/ai/claude", async (req, res) => {
     const { userKey, messages, systemPrompt } = req.body as {

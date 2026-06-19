@@ -143,12 +143,17 @@ export default function Team() {
     }
   };
 
-  // Dev mode utility tool - instantly upgrades user schema to Agency to unlock full premium workspace UI simulation
+  // Dev mode utility tool - instantly upgrades user schema to Agency to unlock full premium workspace UI simulation.
+  // Routed through a server endpoint (Admin SDK) since clients can no longer write `plan` directly — see firestore.rules.
   const handleInstantUpgrade = async () => {
     if (!user || !profile?.id) return;
     try {
-      const userRef = doc(db, "users", profile.id);
-      await updateDoc(userRef, { plan: "agency" });
+      const idToken = await user.getIdToken();
+      const response = await fetch("/api/billing/dev-upgrade", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!response.ok) throw new Error(`Upgrade failed: ${response.status}`);
       await refreshProfile();
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${profile.id}`);
