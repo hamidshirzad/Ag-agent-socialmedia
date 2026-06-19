@@ -30,6 +30,39 @@ function pickKey(provider: 'gemini' | 'anthropic' | 'openai', apiKeys?: ApiKeys)
   return apiKeys?.openai;
 }
 
+export async function generateOutreachMessage(
+  contactName: string,
+  niche: string,
+  targetAudience: string,
+  apiKeys?: ApiKeys,
+  provider: 'gemini' | 'anthropic' | 'openai' = 'gemini',
+) {
+  contactName = escapeForPrompt(contactName);
+  niche = escapeForPrompt(niche);
+  targetAudience = escapeForPrompt(targetAudience);
+
+  const prompt = `
+<task>Write a short, personalized cold outreach opener for this prospect.</task>
+
+<context>
+  <prospect_name>${contactName}</prospect_name>
+  <niche>${niche}</niche>
+  <target_audience>${targetAudience}</target_audience>
+</context>
+
+<output_instructions>
+Return a JSON object with exactly this field:
+- message: a 2-3 sentence, personalized, non-salesy outreach opener addressed to the prospect by first name, referencing the niche, ending with a soft call-to-action.
+</output_instructions>
+  `.trim();
+
+  return generateContentWithEngine(
+    prompt,
+    { provider, apiKey: pickKey(provider, apiKeys) },
+    provider === 'anthropic' ? COPILOT_SYSTEM : undefined,
+  );
+}
+
 export async function generateMarketingContent(
   niche: string,
   targetAudience: string,

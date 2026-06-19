@@ -86,6 +86,20 @@ service cloud.firestore {
               && data.keys().hasAll(['userId', 'email', 'name', 'role', 'status']);
         }
       }
+
+      // Sub-collection: Outreach Contacts
+      match /outreachContacts/{contactId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidOutreachContact(incoming());
+        allow delete: if isOwner(userId);
+
+        function isValidOutreachContact(data) {
+          return data.userId == request.auth.uid
+              && data.name is string && data.name.size() <= 100
+              && data.status in ['pending', 'personalizing', 'sent', 'failed']
+              && data.keys().hasAll(['userId', 'name', 'status', 'createdAt']);
+        }
+      }
     }
 
     // --- Posts ---

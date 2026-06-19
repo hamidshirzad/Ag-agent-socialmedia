@@ -145,6 +145,21 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "email", "name", "role", "status"]
+    },
+    "OutreachContact": {
+      "title": "OutreachContact",
+      "description": "Prospect imported for outbound outreach, with optional AI-personalized message",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "linkedinUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "personalizing", "sent", "failed"] },
+        "personalizedMessage": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -159,6 +174,10 @@
     "/users/{userId}/teamMembers/{memberId}": {
       "schema": "TeamMember",
       "description": "Collaborators in a user's workspace"
+    },
+    "/users/{userId}/outreachContacts/{contactId}": {
+      "schema": "OutreachContact",
+      "description": "Prospects imported for outbound outreach"
     },
     "/posts/{postId}": {
       "schema": "Post",

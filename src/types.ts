@@ -109,3 +109,14 @@ export interface TeamMember {
   status: 'Active' | 'Pending';
   createdAt: any;
 }
+
+export interface OutreachContact {
+  id: string;
+  userId: string;
+  name: string;
+  email?: string;
+  linkedinUrl?: string;
+  status: 'pending' | 'personalizing' | 'sent' | 'failed';
+  personalizedMessage?: string;
+  createdAt: any;
+}
