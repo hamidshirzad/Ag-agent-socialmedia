@@ -1,4 +1,5 @@
 import { generateContentWithEngine } from "./aiService";
+import { escapeForPrompt } from "../lib/utils";
 import type { ApiKeys } from "../types";
 
 // Persistent role injected as the system prompt for every Claude call.
@@ -36,6 +37,10 @@ export async function generateMarketingContent(
   apiKeys?: ApiKeys,
   provider: 'gemini' | 'anthropic' | 'openai' = 'gemini',
 ) {
+  niche = escapeForPrompt(niche);
+  targetAudience = escapeForPrompt(targetAudience);
+  goal = escapeForPrompt(goal);
+
   const prompt = `
 <task>Generate a complete social media content package.</task>
 
@@ -65,6 +70,8 @@ Return a JSON object with exactly these fields:
 }
 
 export async function analyzeLeadIntent(message: string, apiKeys?: ApiKeys) {
+  message = escapeForPrompt(message);
+
   const prompt = `
 <task>Analyze the intent of this prospect message.</task>
 <message>${message}</message>
@@ -93,6 +100,11 @@ export async function generateContentIdeas(
   apiKeys?: ApiKeys,
   provider: 'gemini' | 'anthropic' | 'openai' = 'gemini',
 ) {
+  niche = escapeForPrompt(niche);
+  targetAudience = escapeForPrompt(targetAudience);
+  goal = escapeForPrompt(goal);
+  brief = brief ? escapeForPrompt(brief) : brief;
+
   const prompt = `
 <task>Generate 3 distinct, highly creative content ideas. Analyse the audience's psychological state and goal constraints.</task>
 
@@ -148,6 +160,14 @@ export async function generateMarketingContentForIdea(
   apiKeys?: ApiKeys,
   provider: 'gemini' | 'anthropic' | 'openai' = 'gemini',
 ) {
+  niche = escapeForPrompt(niche);
+  targetAudience = escapeForPrompt(targetAudience);
+  goal = escapeForPrompt(goal);
+  ideaTitle = escapeForPrompt(ideaTitle);
+  ideaConcept = escapeForPrompt(ideaConcept);
+  ideaHookAndAngle = escapeForPrompt(ideaHookAndAngle);
+  ideaVisualPrompt = escapeForPrompt(ideaVisualPrompt);
+
   const prompt = `
 <task>Create a full content deployment package for the selected idea.</task>
 
