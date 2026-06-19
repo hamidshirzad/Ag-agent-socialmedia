@@ -53,7 +53,7 @@ export async function generateVeoVideo(
       operation = await (ai as any).operations.getVideosOperation({ operation: operation });
     } catch (err: any) {
       if (err.message?.includes("Requested entity was not found")) {
-        throw new Error("KEY_NOT_FOUND");
+        throw new Error("KEY_NOT_FOUND", { cause: err });
       }
       throw err;
     }

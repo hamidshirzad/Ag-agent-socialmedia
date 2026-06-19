@@ -55,7 +55,7 @@ export function createApp() {
     const appUrl = process.env.APP_URL || `http://localhost:3000`;
     const redirectUri = `${appUrl}/auth/callback/${platform}`;
     
-    let authUrl = "";
+    let authUrl: string;
     const state = userId as string;
 
     switch (platform) {

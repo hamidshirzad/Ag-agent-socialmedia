@@ -84,9 +84,9 @@ export default function ContentEngine() {
     return onSnapshot(draftsQuery, (snapshot) => {
       const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       const sorted = docs.sort((a: any, b: any) => {
-        const da = a.createdAt ? (a.createdAt.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt).getTime()) : 0;
-        const db_ = b.createdAt ? (b.createdAt.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt).getTime()) : 0;
-        return db_ - da; // newest first
+        const dateA = a.createdAt ? (a.createdAt.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt).getTime()) : 0;
+        const dateB = b.createdAt ? (b.createdAt.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt).getTime()) : 0;
+        return dateB - dateA; // newest first
       });
       setLibraryPosts(sorted);
     });
@@ -202,7 +202,7 @@ export default function ContentEngine() {
       const platformsToSave = selectedPlatforms.length > 0 ? selectedPlatforms : ['general'];
       
       const savePromises = platformsToSave.map(platform => {
-        let caption = "";
+        let caption: string;
         let type: 'video' | 'image' | 'text' = 'text';
         
         if (platform === 'linkedin') { 
@@ -252,7 +252,7 @@ export default function ContentEngine() {
       const scheduledTimestamp = Timestamp.fromDate(new Date(scheduleDate));
       
       const deploymentPromises = selectedPlatforms.map(platform => {
-        let caption = "";
+        let caption: string;
         let type: 'video' | 'image' | 'text' = 'text';
         
         if (platform === 'linkedin') { 

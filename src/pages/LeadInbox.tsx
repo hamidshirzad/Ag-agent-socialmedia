@@ -49,10 +49,14 @@ export default function LeadInbox() {
     return () => {
       try {
         document.head.removeChild(link);
-      } catch (e) {}
+      } catch {
+        // already removed
+      }
       try {
         document.head.removeChild(script);
-      } catch (e) {}
+      } catch {
+        // already removed
+      }
     };
   }, []);
 
@@ -239,9 +243,7 @@ export default function LeadInbox() {
                                    <p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-gold">AI Protocol / Auto Output</p>
                                 </div>
                                 <div className="w-14 h-14 rounded-full bg-sb-accent flex items-center justify-center shrink-0 shadow-lg z-10">
-                                   <Zap className="text-white w-6 h-6 fill-white" /></div></div>{calendlyStatusMap[selectedLead.id] === "sent" && (<div className="flex gap-8 relative justify-end animate-fade-in"><div className="p-10 bg-[#e6f4ea]/60 text-sb-green border border-sb-accent/20 rounded-[12px] sb-shadow-card grow max-w-[48rem] relative before:absolute before:right-[-10px] before:top-4 before:w-5 before:h-5 before:bg-[#e6f4ea]/60 before:rotate-45"><p className="text-[1.5rem] leading-relaxed mb-3 font-bold">📬 Calendly direct invitation sent!</p><p className="text-[1.3rem] leading-relaxed mb-4 font-semibold text-sb-house">"Hi {selectedLead.name.split(' ')[0]}, here is the direct booking calendar link so we can schedule some time together on our dashboard: {import.meta.env.VITE_CALENDLY_BOOKING_LINK || 'https://calendly.com/hameed-sherzad22/100'}"</p><p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-accent">Agent Outbound Dispatched</p></div><div className="w-14 h-14 rounded-full bg-sb-green flex items-center justify-center shrink-0 shadow-lg z-10 font-bold"><Calendar size={18} className="text-white" /></div></div>)}<div className="hidden"><div className="hidden">
-                                </div>
-                             </div>
+                                   <Zap className="text-white w-6 h-6 fill-white" /></div></div>{calendlyStatusMap[selectedLead.id] === "sent" && (<div className="flex gap-8 relative justify-end animate-fade-in"><div className="p-10 bg-[#e6f4ea]/60 text-sb-green border border-sb-accent/20 rounded-[12px] sb-shadow-card grow max-w-[48rem] relative before:absolute before:right-[-10px] before:top-4 before:w-5 before:h-5 before:bg-[#e6f4ea]/60 before:rotate-45"><p className="text-[1.5rem] leading-relaxed mb-3 font-bold">📬 Calendly direct invitation sent!</p><p className="text-[1.3rem] leading-relaxed mb-4 font-semibold text-sb-house">"Hi {selectedLead.name.split(' ')[0]}, here is the direct booking calendar link so we can schedule some time together on our dashboard: {import.meta.env.VITE_CALENDLY_BOOKING_LINK || 'https://calendly.com/hameed-sherzad22/100'}"</p><p className="text-[1.1rem] font-black uppercase tracking-widest text-sb-accent">Agent Outbound Dispatched</p></div><div className="w-14 h-14 rounded-full bg-sb-green flex items-center justify-center shrink-0 shadow-lg z-10 font-bold"><Calendar size={18} className="text-white" /></div></div>)}
                           </div>
                        </section>
                     </div>

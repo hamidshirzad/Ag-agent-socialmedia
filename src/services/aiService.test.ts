@@ -64,7 +64,7 @@ describe("aiService / generateContentWithEngine", () => {
   });
 
   it("throws for unsupported provider", async () => {
-    // @ts-ignore
+    // @ts-expect-error testing invalid provider value
     await expect(generateContentWithEngine("test", { provider: "invalid" }))
       .rejects.toThrow("Unsupported AI Provider");
   });
