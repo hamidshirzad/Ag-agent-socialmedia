@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
-import PageMeta from "../components/PageMeta";
-import { Tooltip } from "../components/Tooltip";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Plus, 
@@ -89,7 +87,7 @@ export default function Campaigns() {
       })) as Campaign[];
       setCampaigns(data);
       setLoading(false);
-    }, (err) => handleFirestoreError(err, OperationType.LIST, "campaigns"));
+    });
 
     return () => unsubscribe();
   }, [user]);
@@ -169,7 +167,6 @@ export default function Campaigns() {
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
-      <PageMeta title="Campaigns" description="Create, manage, and track your AI-powered social campaigns." path="/campaigns" />
       <Sidebar />
       
       <main className="flex-1 p-12 lg:p-20 overflow-y-auto">
@@ -222,15 +219,13 @@ export default function Campaigns() {
                          <span className="text-[1rem] font-black uppercase tracking-widest">No Visual identity</span>
                       </div>
                     )}
-                    <Tooltip content="Generate Neural Visual" placement="left">
-                      <button
-                        onClick={() => handleGenerateImage(campaign.id, campaign.name, campaign.niche)}
-                        aria-label="Generate Neural Visual"
-                        className="absolute top-4 right-4 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-xl opacity-0 group-hover/img:opacity-100 transition-all hover:bg-sb-gold hover:text-white"
-                      >
-                        <Sparkles size={16} />
-                      </button>
-                    </Tooltip>
+                    <button 
+                       onClick={() => handleGenerateImage(campaign.id, campaign.name, campaign.niche)}
+                       className="absolute top-4 right-4 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-xl opacity-0 group-hover/img:opacity-100 transition-all hover:bg-sb-gold hover:text-white"
+                       title="Generate Neural Visual"
+                    >
+                       <Sparkles size={16} />
+                    </button>
                     <div className="absolute top-4 left-4 flex gap-2">
                       <div className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center shadow-inner bg-white/90 backdrop-blur-sm",
@@ -247,24 +242,18 @@ export default function Campaigns() {
                         {campaign.name}
                       </h3>
                        <div className="flex gap-2 ml-4">
-                          <Tooltip content={campaign.active ? "Deactivate" : "Activate"} placement="top">
-                            <button
-                              onClick={() => toggleCampaignStatus(campaign.id, campaign.active)}
-                              aria-label={campaign.active ? "Deactivate campaign" : "Activate campaign"}
-                              className="p-3 bg-sb-cream rounded-full hover:bg-white border border-black/5 transition-all"
-                            >
-                              {campaign.active ? <XCircle size={14} className="text-red-500" /> : <CheckCircle2 size={14} className="text-sb-accent" />}
-                            </button>
-                          </Tooltip>
-                          <Tooltip content="Delete Campaign" placement="top">
-                            <button
-                              onClick={() => handleDeleteCampaign(campaign.id)}
-                              aria-label="Delete campaign"
-                              className="p-3 bg-sb-cream rounded-full hover:bg-red-50 border border-black/5 transition-all text-red-400"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </Tooltip>
+                          <button 
+                            onClick={() => toggleCampaignStatus(campaign.id, campaign.active)}
+                            className="p-3 bg-sb-cream rounded-full hover:bg-white border border-black/5 transition-all"
+                          >
+                             {campaign.active ? <XCircle size={14} className="text-red-500" /> : <CheckCircle2 size={14} className="text-sb-accent" />}
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteCampaign(campaign.id)}
+                            className="p-3 bg-sb-cream rounded-full hover:bg-red-50 border border-black/5 transition-all text-red-400"
+                          >
+                             <Trash2 size={14} />
+                          </button>
                        </div>
                     </div>
                   
@@ -275,12 +264,13 @@ export default function Campaigns() {
                     
                     <div className="flex flex-wrap gap-2 py-2">
                        {inferGoalIcons(campaign.goals).map((obj, i) => (
-                          <div
-                            key={i}
+                          <div 
+                            key={i} 
                             className={cn(
                               "flex items-center gap-2 px-3 py-1.5 rounded-full bg-sb-cream border border-black/5",
                               obj.color
                             )}
+                            title={obj.label}
                           >
                              <obj.icon size={12} />
                              <span className="text-[1rem] font-black uppercase tracking-widest">{obj.label}</span>
@@ -298,7 +288,7 @@ export default function Campaigns() {
                      <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                            <FlaskConical size={14} className="text-sb-gold" />
-                           <span className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/60">A/B Variations</span>
+                           <span className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/60">A/B Variations</span>
                         </div>
                         <button 
                            onClick={() => setActiveCampaignForVariation(campaign.id)}
@@ -310,7 +300,7 @@ export default function Campaigns() {
                      
                      <div className="space-y-4">
                         {(!campaign.variations || campaign.variations.length === 0) ? (
-                           <p className="text-[1.2rem] text-black/30 font-medium italic">No active experiments. Add one to start A/B testing.</p>
+                           <p className="text-[1.1rem] text-black/30 font-medium italic">No active experiments. Add one to start A/B testing.</p>
                         ) : (
                            campaign.variations.map(v => (
                               <div key={v.id} className="bg-sb-cream p-4 rounded-[8px] flex justify-between items-center group/var">
@@ -392,7 +382,7 @@ export default function Campaigns() {
 
                 <div className="space-y-8">
                   <div className="space-y-2">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Variant Name</label>
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Variant Name</label>
                     <input 
                       placeholder="e.g. Action-Oriented vs Educational"
                       value={newVariation.name}
@@ -401,7 +391,7 @@ export default function Campaigns() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Variant Bias / Tone</label>
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Variant Bias / Tone</label>
                     <textarea 
                       placeholder="Describe how this variation should differ from the baseline strategy..."
                       value={newVariation.description}
@@ -449,7 +439,7 @@ export default function Campaigns() {
 
                 <form onSubmit={handleAddCampaign} className="space-y-8">
                   <div className="space-y-2">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Campaign Name</label>
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Campaign Name</label>
                     <input 
                       required
                       placeholder="e.g. Q3 SaaS Expansion"
@@ -460,7 +450,7 @@ export default function Campaigns() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2 flex items-center gap-2">
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2 flex items-center gap-2">
                       <Globe size={12} /> Target Niche
                     </label>
                     <input 
@@ -473,7 +463,7 @@ export default function Campaigns() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[1.2rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Neural Goal / ROI Target</label>
+                    <label className="text-[1.1rem] font-black uppercase tracking-[0.2em] text-sb-green/40 px-2">Neural Goal / ROI Target</label>
                     <textarea 
                       required
                       placeholder="Define the core intent and expected outcome..."

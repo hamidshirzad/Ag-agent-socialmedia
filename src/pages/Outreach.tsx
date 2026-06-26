@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Sidebar } from "../components/Sidebar";
-import PageMeta from "../components/PageMeta";
 import { Upload, Mail, CheckCircle, Send, Play, BarChart2, Zap } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -9,7 +8,6 @@ export default function Outreach() {
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
-      <PageMeta title="Outreach" description="Automate personalised outreach and follow-up sequences." path="/outreach" />
       <Sidebar />
       <main className="flex-1 p-12 lg:p-24 overflow-y-auto">
         <header className="mb-16 pb-8 border-b border-black/10">

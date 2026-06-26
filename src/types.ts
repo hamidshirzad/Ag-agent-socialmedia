@@ -1,9 +1,3 @@
-export interface ApiKeys {
-  gemini?:    string;
-  anthropic?: string;
-  openai?:    string;
-}
-
 export interface UserProfile {
   id: string;
   name: string;
@@ -16,7 +10,11 @@ export interface UserProfile {
   paypalSubscriptionId?: string;
   onboardingComplete: boolean;
   createdAt: string;
-  apiKeys?: ApiKeys;
+  apiKeys?: {
+    openai?: string;
+    anthropic?: string;
+    gemini?: string;
+  };
   socialAccounts?: {
     platform: 'linkedin' | 'x' | 'meta' | 'tiktok';
     accessToken: string;

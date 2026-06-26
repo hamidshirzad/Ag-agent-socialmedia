@@ -1,170 +1,127 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
-import { signInWithCustomToken, signOut as firebaseSignOut, type User } from "firebase/auth";
-import { auth, db } from "../lib/firebase";
+import { onAuthStateChanged, User, signInWithPopup, signOut, GoogleAuthProvider } from "firebase/auth";
+import { auth, googleProvider, db, handleFirestoreError, OperationType } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import type { UserProfile } from "../types";
+import { UserProfile } from "../types";
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
-  signIn: () => Promise<{ isNewUser: boolean }>;
+  signIn: () => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  accessToken: string | null;
+  setAccessToken: (token: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-async function getFirebaseCustomToken(idToken: string): Promise<string> {
-  const resp = await fetch("/.netlify/functions/firebase-custom-token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
-  });
-  if (!resp.ok) {
-    const { error } = await resp.json().catch(() => ({ error: "Token exchange failed" }));
-    throw new Error(error);
-  }
-  const { firebaseToken } = await resp.json();
-  return firebaseToken;
-}
-
-async function syncToFirestore(
-  fbUser: User,
-  email: string,
-  name: string
-): Promise<{ profile: UserProfile; isNewUser: boolean }> {
-  const uid     = fbUser.uid;
-  const userRef = doc(db, "users", uid);
-  const snap    = await getDoc(userRef);
-
-  if (!snap.exists()) {
-    const newProfile: Partial<UserProfile> = {
-      email,
-      name: name || "New User",
-      plan: "starter",
-      subscriptionStatus: "inactive",
-      onboardingComplete: false,
-      createdAt: new Date().toISOString(),
-    };
-    await setDoc(userRef, newProfile);
-    return { profile: { id: uid, ...newProfile } as UserProfile, isNewUser: true };
-  }
-
-  return { profile: { id: uid, ...snap.data() } as UserProfile, isNewUser: false };
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const {
-    loginWithPopup,
-    logout: auth0Logout,
-    getIdTokenClaims,
-    isAuthenticated,
-    isLoading: auth0Loading,
-    user: auth0User,
-  } = useAuth0();
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
-  const [profile,      setProfile]      = useState<UserProfile | null>(null);
-  const [loading,      setLoading]      = useState(true);
-
-  // Restore Firebase session when Auth0 session already exists (page reload)
-  useEffect(() => {
-    if (auth0Loading) return;
-
-    if (!isAuthenticated || !auth0User) {
-      setLoading(false);
-      return;
-    }
-
-    // Skip if Firebase is already signed in (signIn() handled it already)
-    if (auth.currentUser) {
-      setLoading(false);
-      return;
-    }
-
-    const restore = async () => {
-      try {
-        const claims  = await getIdTokenClaims();
-        const idToken = claims?.__raw;
-        if (!idToken) throw new Error("No ID token");
-
-        const firebaseToken = await getFirebaseCustomToken(idToken);
-        const credential    = await signInWithCustomToken(auth, firebaseToken);
-        const fbUser        = credential.user;
-
-        const { profile: prof } = await syncToFirestore(
-          fbUser,
-          auth0User.email ?? "",
-          auth0User.name  ?? ""
-        );
-
-        setFirebaseUser(fbUser);
-        setProfile(prof);
-      } catch (err) {
-        console.error("[Auth] Session restore failed:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    restore();
-  }, [isAuthenticated, auth0Loading]);
-
-  const signIn = async (): Promise<{ isNewUser: boolean }> => {
-    await loginWithPopup();
+  const fetchProfile = async (uid: string) => {
     try {
-      const claims  = await getIdTokenClaims();
-      const idToken = claims?.__raw;
-      if (!idToken) throw new Error("No ID token after login");
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        setProfile({ id: uid, ...userSnap.data() } as UserProfile);
+      } else {
+        setProfile(null);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `users/${uid}`);
+    }
+  };
 
-      const firebaseToken = await getFirebaseCustomToken(idToken);
-      const credential    = await signInWithCustomToken(auth, firebaseToken);
-      const fbUser        = credential.user;
-
-      const { profile: prof, isNewUser } = await syncToFirestore(
-        fbUser,
-        auth0User?.email ?? "",
-        auth0User?.name  ?? ""
-      );
-
-      setFirebaseUser(fbUser);
-      setProfile(prof);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user);
+      if (user) {
+        await fetchProfile(user.uid);
+      } else {
+        setProfile(null);
+        setAccessToken(null);
+      }
       setLoading(false);
-      return { isNewUser };
-    } catch (err) {
-      console.error("[Auth] Sign-in sync failed:", err);
-      return { isNewUser: false };
+    });
+    return unsubscribe;
+  }, []);
+
+  const signIn = async (): Promise<{ success: boolean; isNewUser?: boolean; error?: string }> => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+      setUser(firebaseUser); // Update immediately to prevent race conditions
+
+      // Extract OAuth Credential to get Access Token
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (credential?.accessToken) {
+        setAccessToken(credential.accessToken);
+      }
+
+      // Initialize profile if not exists
+      const userRef = doc(db, "users", firebaseUser.uid);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        const newProfile: Partial<UserProfile> = {
+          email: firebaseUser.email || "",
+          name: firebaseUser.displayName || "New User",
+          plan: 'starter',
+          subscriptionStatus: 'inactive',
+          onboardingComplete: false,
+          createdAt: new Date().toISOString(),
+        };
+        await setDoc(userRef, newProfile);
+        setProfile({ id: firebaseUser.uid, ...newProfile } as UserProfile);
+        return { success: true, isNewUser: true };
+      } else {
+        setProfile({ id: firebaseUser.uid, ...userSnap.data() } as UserProfile);
+        return { success: true, isNewUser: false };
+      }
+    } catch (error: any) {
+      console.error("Login failed", error);
+      
+      let friendlyMessage = "Failed to sign in. Please try again.";
+      if (error && typeof error === "object") {
+        const code = error.code || "";
+        const message = error.message || "";
+        
+        if (
+          code === "auth/popup-closed-by-user" || 
+          message.includes("popup-closed-by-user") ||
+          code === "auth/cancelled-popup-request" ||
+          message.includes("cancelled-popup-request")
+        ) {
+          friendlyMessage = "The login popup was closed or cancelled. This app runs inside an iframe (the AI Studio preview), which restricts/blocks popups. To login successfully, please allow popups in your browser settings, or open this page in a new tab using the 'Launch in New Tab' button or the editor header button for a seamless experience.";
+        } else if (code === "auth/popup-blocked" || message.includes("popup-blocked")) {
+          friendlyMessage = "The browser blocked the login popup. Please enable popups for this site, or open this application in a new tab.";
+        } else if (code === "auth/operation-not-allowed" || message.includes("operation-not-allowed")) {
+          friendlyMessage = "Google sign-in is not enabled on this Firebase project. Please enable Google provider under Authentication in your Firebase console.";
+        } else if (code === "auth/unauthorized-domain" || message.includes("unauthorized-domain")) {
+          friendlyMessage = "This domain is not authorized for OAuth in Firebase. Please add this preview domain to Authorized domains in your Firebase console settings.";
+        } else if (message) {
+          friendlyMessage = `Authentication error: ${message}`;
+        }
+      }
+      return { success: false, error: friendlyMessage };
     }
   };
 
   const logout = async () => {
-    await firebaseSignOut(auth);
-    setFirebaseUser(null);
-    setProfile(null);
-    auth0Logout({ logoutParams: { returnTo: window.location.origin } });
+    await signOut(auth);
+    setAccessToken(null);
   };
 
   const refreshProfile = async () => {
-    if (!firebaseUser) return;
-    try {
-      const snap = await getDoc(doc(db, "users", firebaseUser.uid));
-      if (snap.exists()) setProfile({ id: firebaseUser.uid, ...snap.data() } as UserProfile);
-    } catch (err) {
-      console.error("[Auth] Profile refresh failed:", err);
-    }
+    if (user) await fetchProfile(user.uid);
   };
 
   return (
-    <AuthContext.Provider value={{
-      user:     firebaseUser,
-      profile,
-      loading:  loading || auth0Loading,
-      signIn,
-      logout,
-      refreshProfile,
-    }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, logout, refreshProfile, accessToken, setAccessToken }}>
       {children}
     </AuthContext.Provider>
   );
@@ -172,6 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within an AuthProvider");
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
   return context;
 }
