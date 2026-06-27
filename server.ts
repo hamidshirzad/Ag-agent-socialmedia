@@ -7,6 +7,8 @@ import axios from "axios";
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
+import Stripe from "stripe";
+import { getStripeClient, getStripePriceId, getPlanFromPriceId, PlanId } from "./src/lib/stripe";
 
 dotenv.config();
 
@@ -26,6 +28,83 @@ const targetDb = getFirestore(dbId || "(default)");
 
 export function createApp() {
   const app = express();
+
+  // Stripe Webhook - must read the raw body for signature verification,
+  // so it's registered before the global express.json() middleware.
+  app.post("/api/billing/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    let event: Stripe.Event;
+    try {
+      const stripe = getStripeClient();
+      if (!sig || !webhookSecret) throw new Error("Missing Stripe signature or webhook secret");
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (error: any) {
+      console.error("Stripe webhook signature verification failed:", error.message);
+      return res.status(400).send(`Webhook Error: ${error.message}`);
+    }
+
+    try {
+      switch (event.type) {
+        case "checkout.session.completed": {
+          const session = event.data.object as Stripe.Checkout.Session;
+          const userId = session.client_reference_id;
+          const plan = session.metadata?.plan as PlanId | undefined;
+          if (userId) {
+            await targetDb.collection("users").doc(userId).update({
+              plan: plan || "starter",
+              subscriptionStatus: "active",
+              stripeCustomerId: session.customer as string,
+              stripeSubscriptionId: session.subscription as string,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+          break;
+        }
+
+        case "customer.subscription.updated": {
+          const subscription = event.data.object as Stripe.Subscription;
+          const userQuery = await targetDb.collection("users").where("stripeSubscriptionId", "==", subscription.id).get();
+          if (!userQuery.empty) {
+            const item = subscription.items.data[0];
+            const priceId = item?.price.id;
+            await userQuery.docs[0].ref.update({
+              subscriptionStatus: subscription.status,
+              stripePriceId: priceId,
+              plan: getPlanFromPriceId(priceId) || userQuery.docs[0].data().plan,
+              subscriptionRenewsAt: item ? new Date(item.current_period_end * 1000).toISOString() : null,
+              updatedAt: new Date().toISOString(),
+            });
+          }
+          break;
+        }
+
+        case "customer.subscription.deleted": {
+          const subscription = event.data.object as Stripe.Subscription;
+          const userQuery = await targetDb.collection("users").where("stripeSubscriptionId", "==", subscription.id).get();
+          if (!userQuery.empty) {
+            await userQuery.docs[0].ref.update({
+              plan: "starter",
+              subscriptionStatus: "cancelled",
+              subscriptionCancelledAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          }
+          break;
+        }
+
+        default:
+          console.log(`Unhandled Stripe event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Stripe webhook processing error:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
   app.use(express.json());
 
   // API Routes
@@ -263,6 +342,72 @@ export function createApp() {
     } catch (error) {
       console.error("Webhook Processing Error:", error);
       res.status(500).send("Internal Server Error");
+    }
+  });
+
+  // Stripe Checkout - creates a subscription checkout session for a plan
+  app.post("/api/billing/create-checkout-session", async (req, res) => {
+    const { userId, plan } = req.body as { userId?: string; plan?: PlanId };
+    if (!userId || !plan) return res.status(400).json({ error: "userId and plan are required" });
+
+    const priceId = getStripePriceId(plan);
+    if (!priceId) return res.status(400).json({ error: `No Stripe price configured for plan "${plan}"` });
+
+    try {
+      const stripe = getStripeClient();
+      const userRef = targetDb.collection("users").doc(userId);
+      const userSnap = await userRef.get();
+      const userData = userSnap.data();
+
+      let customerId = userData?.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: userData?.email,
+          metadata: { userId },
+        });
+        customerId = customer.id;
+        await userRef.update({ stripeCustomerId: customerId });
+      }
+
+      const appUrl = process.env.APP_URL || "http://localhost:3000";
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        customer: customerId,
+        client_reference_id: userId,
+        line_items: [{ price: priceId, quantity: 1 }],
+        metadata: { plan, userId },
+        success_url: `${appUrl}/billing?success=true`,
+        cancel_url: `${appUrl}/billing?canceled=true`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Stripe checkout session error:", error.message);
+      res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
+  // Stripe Billing Portal - lets users manage/cancel their subscription
+  app.post("/api/billing/create-portal-session", async (req, res) => {
+    const { userId } = req.body as { userId?: string };
+    if (!userId) return res.status(400).json({ error: "userId is required" });
+
+    try {
+      const stripe = getStripeClient();
+      const userSnap = await targetDb.collection("users").doc(userId).get();
+      const customerId = userSnap.data()?.stripeCustomerId;
+      if (!customerId) return res.status(400).json({ error: "No Stripe customer found for this user" });
+
+      const appUrl = process.env.APP_URL || "http://localhost:3000";
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${appUrl}/billing`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Stripe portal session error:", error.message);
+      res.status(500).json({ error: "Failed to create portal session" });
     }
   });
 

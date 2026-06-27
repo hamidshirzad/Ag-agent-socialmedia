@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { useAuth } from "../contexts/AuthContext";
 import { 
@@ -15,11 +15,14 @@ import { cn } from "../lib/utils";
 import { motion } from "motion/react";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
+const STRIPE_BUY_BUTTON_ID = "buy_btn_1TiCDDFFlyQJmhYsStGMp1fX";
+const STRIPE_PUBLISHABLE_KEY = "pk_live_51OfDuBFFlyQJmhYsiSrtcyTp1AIdjTSkBtToM3xaoa95YDnSE1LGmtYpd9IBLv0ESCKnVAuMhXscb2M3g9CGPs8J00Sfg64306";
+
 const PLANS = [
   {
     id: "starter",
     name: "Starter",
-    price: "$29",
+    price: "€29",
     description: "Perfect for solo operators and small brands.",
     features: [
       "100 AI Generations / mo",
@@ -33,7 +36,7 @@ const PLANS = [
   {
     id: "pro",
     name: "Pro",
-    price: "$99",
+    price: "€79",
     description: "Advanced neural engine for growth hackers.",
     features: [
       "Unlimited AI Generations",
@@ -49,7 +52,7 @@ const PLANS = [
   {
     id: "agency",
     name: "Agency",
-    price: "$299",
+    price: "€199",
     description: "Multi-tenant solution for high-volume firms.",
     features: [
       "Everything in Pro",
@@ -66,11 +69,30 @@ const PLANS = [
 export default function Billing() {
   const { profile } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const paypalOptions = {
     clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || "test",
     intent: "subscription",
     vault: true,
+  };
+
+  const handleManageBilling = async () => {
+    if (!profile?.id) return;
+    setPortalLoading(true);
+    try {
+      const response = await fetch("/api/billing/create-portal-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: profile.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to open billing portal");
+      window.location.href = data.url;
+    } catch (error: any) {
+      alert(error.message || "Failed to open billing portal");
+      setPortalLoading(false);
+    }
   };
 
   return (
@@ -100,6 +122,16 @@ export default function Billing() {
                 <div className="h-full bg-sb-gold w-[42%] shadow-[0_0_8px_#cba258]" />
               </div>
               <p className="mt-4 text-[1.3rem] opacity-60 font-medium">4.2k / 10k tokens consumed this month</p>
+
+              {profile?.stripeCustomerId && (
+                <button
+                  onClick={handleManageBilling}
+                  disabled={portalLoading}
+                  className="mt-8 px-8 py-4 rounded-full font-black uppercase tracking-[0.15em] text-[1.2rem] bg-white/10 hover:bg-white/20 text-white transition-all disabled:opacity-50"
+                >
+                  {portalLoading ? "Opening Portal..." : "Manage Subscription"}
+                </button>
+              )}
             </div>
             
             <div className="bg-white/5 p-10 rounded-[12px] border border-white/10 backdrop-blur-sm min-w-[28rem] relative z-10 text-center">
@@ -154,8 +186,12 @@ export default function Billing() {
 
                 {selectedPlan === plan.id ? (
                   <div className="space-y-4">
+                    {createElement("stripe-buy-button", {
+                      "buy-button-id": STRIPE_BUY_BUTTON_ID,
+                      "publishable-key": STRIPE_PUBLISHABLE_KEY,
+                    })}
                     <PayPalScriptProvider options={paypalOptions as any}>
-                      <PayPalButtons 
+                      <PayPalButtons
                         style={{ layout: "vertical", shape: "pill", label: "subscribe" }}
                         createSubscription={(data, actions) => {
                           return actions.subscription.create({
@@ -167,7 +203,7 @@ export default function Billing() {
                         }}
                       />
                     </PayPalScriptProvider>
-                    <button 
+                    <button
                       onClick={() => setSelectedPlan(null)}
                       className="w-full text-[1.2rem] font-bold text-black/30 hover:text-red-500 transition-colors uppercase tracking-widest"
                     >

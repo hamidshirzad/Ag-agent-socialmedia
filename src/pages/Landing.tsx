@@ -21,12 +21,7 @@ export default function Landing() {
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
     } else {
-      const res = await signIn();
-      if (res && res.success) {
-        navigate(res.isNewUser ? "/onboarding" : "/dashboard");
-      } else if (res && res.error) {
-        setErrorMsg(res.error);
-      }
+      await signIn();
     }
   };
 
@@ -350,7 +345,10 @@ export default function Landing() {
           >
             Launch Mission
           </button>
-          <button className="font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-8 py-3.5 rounded-[3px] bg-transparent text-[#00e5ff] border border-[#00e5ff]/40 hover:bg-[#00e5ff]/10 hover:border-[#00e5ff] hover:-translate-y-0.5 transition-all">
+          <button
+            onClick={handleStart}
+            className="font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-8 py-3.5 rounded-[3px] bg-transparent text-[#00e5ff] border border-[#00e5ff]/40 hover:bg-[#00e5ff]/10 hover:border-[#00e5ff] hover:-translate-y-0.5 transition-all"
+          >
             Explore Data
           </button>
         </motion.div>
