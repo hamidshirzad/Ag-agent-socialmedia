@@ -1,12 +1,17 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useAuth0, User as Auth0User } from "@auth0/auth0-react";
 import { auth, googleProvider, db, handleFirestoreError, OperationType } from "../lib/firebase";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import {
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  type User as FirebaseUser,
+} from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { UserProfile } from "../types";
 
 interface AuthContextType {
-  user: Auth0User | null;
+  user: FirebaseUser | null;
   profile: UserProfile | null;
   loading: boolean;
   signIn: () => Promise<{ isNewUser: boolean }>;
@@ -20,17 +25,21 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const {
-    user: auth0User,
-    isLoading,
-    isAuthenticated,
-    loginWithRedirect,
-    logout: auth0Logout,
-  } = useAuth0();
-
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  // Track Firebase auth state. Fires once on mount with the current user
+  // (or null), then on every sign-in / sign-out.
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setFirebaseUser(u);
+      setAuthLoading(false);
+    });
+    return unsubscribe;
+  }, []);
 
   const fetchProfile = async (uid: string) => {
     setProfileLoading(true);
@@ -50,10 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (isLoading) return;
+    if (authLoading) return;
 
-    if (isAuthenticated && auth0User?.sub) {
-      const uid = auth0User.sub;
+    if (firebaseUser?.uid) {
+      const uid = firebaseUser.uid;
       const initOrFetchProfile = async () => {
         setProfileLoading(true);
         try {
@@ -61,8 +70,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userSnap = await getDoc(userRef);
           if (!userSnap.exists()) {
             const newProfile: Partial<UserProfile> = {
-              email: auth0User.email || "",
-              name: auth0User.name || "New User",
+              email: firebaseUser.email || "",
+              name: firebaseUser.displayName || "New User",
               plan: "starter",
               subscriptionStatus: "inactive",
               onboardingComplete: false,
@@ -83,20 +92,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setProfile(null);
     }
-  }, [isLoading, isAuthenticated, auth0User?.sub]);
+  }, [authLoading, firebaseUser?.uid]);
 
   const signIn = async (): Promise<{ isNewUser: boolean }> => {
-    await loginWithRedirect();
+    // Google sign-in via Firebase popup. The onAuthStateChanged effect above
+    // handles first-time Firestore profile creation; navigation in the UI is
+    // driven by profile.onboardingComplete, so isNewUser is informational.
+    await signInWithPopup(auth, googleProvider);
     return { isNewUser: false };
   };
 
   const logout = async () => {
     setAccessToken(null);
-    auth0Logout({ logoutParams: { returnTo: window.location.origin } });
+    await signOut(auth);
   };
 
   const refreshProfile = async () => {
-    if (auth0User?.sub) await fetchProfile(auth0User.sub);
+    const uid = auth.currentUser?.uid;
+    if (uid) await fetchProfile(uid);
   };
 
   // Separate Google sign-in (via Firebase popup) used only to obtain a
@@ -140,9 +153,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: auth0User ?? null,
+        user: firebaseUser,
         profile,
-        loading: isLoading || profileLoading,
+        loading: authLoading || profileLoading,
         signIn,
         logout,
         refreshProfile,
