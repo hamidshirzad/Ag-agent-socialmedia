@@ -9,24 +9,36 @@ import { TICKS, type ScreenId } from "./consoleData";
  * status ticker rotates through TICKS on an interval (React-driven, replacing the
  * mockup's imperative DOM ticker).
  */
-export function MinionBar({ onNavigate }: { onNavigate: (id: ScreenId) => void }) {
+export function MinionBar({
+  onNavigate,
+  collapsed = false,
+}: {
+  onNavigate: (id: ScreenId) => void;
+  collapsed?: boolean;
+}) {
   const [tickIdx, setTickIdx] = useState(0);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    // Track the fade timeout in effect scope so it is actually cleared on
+    // unmount (returning a cleanup from the interval callback does nothing).
+    let fade: ReturnType<typeof setTimeout> | null = null;
     const interval = setInterval(() => {
       setVisible(false);
-      const t = setTimeout(() => {
+      if (fade) clearTimeout(fade);
+      fade = setTimeout(() => {
         setTickIdx((i) => (i + 1) % TICKS.length);
         setVisible(true);
       }, 300);
-      return () => clearTimeout(t);
     }, 3000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (fade) clearTimeout(fade);
+    };
   }, []);
 
   return (
-    <div className="fd-minions">
+    <div className={`fd-minions${collapsed ? " full" : ""}`}>
       {MINIONS.map((minion, i) => (
         <div
           key={i}
@@ -43,30 +55,21 @@ export function MinionBar({ onNavigate }: { onNavigate: (id: ScreenId) => void }
       ))}
 
       {/* Live ticker */}
-      <div
-        style={{
-          display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-          padding: "0 16px",
-          borderLeft: "1px solid rgba(255,255,255,.06)",
-          borderRight: "1px solid rgba(255,255,255,.06)",
-        }}
-      >
-        <div style={{ fontSize: 9, letterSpacing: ".15em", color: "#475569", textTransform: "uppercase", fontWeight: 600 }}>
+      <div className="flex flex-col items-center gap-1 px-4 border-l border-r border-white/[.06]">
+        <div className="text-[9px] tracking-[.15em] text-[#475569] uppercase font-semibold">
           System Status
         </div>
         <div
-          style={{
-            fontFamily: "'Space Grotesk', monospace", fontSize: 11, color: "#5de6ff",
-            letterSpacing: ".05em", minWidth: 240, textAlign: "center",
-            opacity: visible ? 1 : 0, transition: "opacity .3s",
-          }}
+          className={`font-data-point text-[11px] text-secondary tracking-[.05em] min-w-[240px] text-center transition-opacity duration-300 ${
+            visible ? "opacity-100" : "opacity-0"
+          }`}
         >
           {TICKS[tickIdx]}
         </div>
-        <div style={{ display: "flex", gap: 12, marginTop: 2 }}>
-          <div style={{ fontSize: 10, color: "#64748b" }}>Leads today: <span style={{ color: "#c0c1ff", fontWeight: 700 }}>47</span></div>
-          <div style={{ fontSize: 10, color: "#64748b" }}>Posts: <span style={{ color: "#5de6ff", fontWeight: 700 }}>12</span></div>
-          <div style={{ fontSize: 10, color: "#64748b" }}>Booked: <span style={{ color: "#22d3ee", fontWeight: 700 }}>8</span></div>
+        <div className="flex gap-3 mt-0.5">
+          <div className="text-[10px] text-[#64748b]">Leads today: <span className="text-primary font-bold">47</span></div>
+          <div className="text-[10px] text-[#64748b]">Posts: <span className="text-secondary font-bold">12</span></div>
+          <div className="text-[10px] text-[#64748b]">Booked: <span className="text-[#22d3ee] font-bold">8</span></div>
         </div>
       </div>
     </div>
