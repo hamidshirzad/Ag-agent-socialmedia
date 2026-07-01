@@ -15,7 +15,7 @@ const Icon = ({ name, className, style }: { name: string; className?: string; st
 function ScreenPlaceholder({ label, group }: { label: string; group: GroupId }) {
   return (
     <div className="p-container-padding max-w-[1400px] mx-auto">
-      <div className="glass-card rounded-xl p-10 flex flex-col items-center justify-center text-center gap-3" style={{ minHeight: 360 }}>
+      <div className="glass-card rounded-xl p-10 flex flex-col items-center justify-center text-center gap-3 min-h-[360px]">
         <Icon name="construction" className="text-primary-container" style={{ fontSize: 40 }} />
         <h1 className="font-h2 text-h2 text-on-surface">{label}</h1>
         <p className="text-on-surface-variant font-body-main max-w-md">
@@ -119,9 +119,9 @@ export default function DashboardConsole() {
           <span className="page-title">{meta.label}</span>
         </div>
         <div className="topbar-right">
-          <div style={{ display: "flex", alignItems: "center", background: "rgba(30,41,59,.5)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 6, padding: "4px 11px", gap: 7, marginRight: 4 }}>
-            <Icon name="search" style={{ color: "#475569", fontSize: 15 }} />
-            <input style={{ background: "none", border: "none", outline: "none", color: "#cbd5e1", fontSize: 13, width: 110 }} placeholder="Search..." />
+          <div className="flex items-center bg-[#1e293b]/50 border border-white/[.06] rounded-md py-1 px-[11px] gap-[7px] mr-1">
+            <Icon name="search" className="text-[#475569] text-[15px]" />
+            <input className="bg-transparent border-none outline-none text-[#cbd5e1] text-[13px] w-[110px]" placeholder="Search..." />
           </div>
           <span className="plan-badge">{planLabel}</span>
           <button className="topbar-btn" aria-label="Notifications"><Icon name="notifications" /></button>
@@ -139,7 +139,7 @@ export default function DashboardConsole() {
       </div>
 
       {/* MINION BAR */}
-      <MinionBar onNavigate={navigate} />
+      <MinionBar collapsed={collapsed} onNavigate={navigate} />
     </div>
   );
 }
