@@ -1,0 +1,111 @@
+/* Fourdoor Console — dark-glass dashboard shell.
+   Ported from the fourdoor_ai.html mockup <style> block. All rules are scoped
+   under .fd-console so they never leak into the rest of the app (which uses the
+   light "sb-" theme). ID selectors from the mockup are converted to classes. */
+
+/* While the console route is mounted, restore a 100% root font-size (the app
+   sets html{font-size:62.5%}) so the console's rem-based Tailwind utilities
+   render at their intended scale, and lock scrolling to the console panes. */
+html.fd-console-active { font-size: 100%; }
+html.fd-console-active,
+html.fd-console-active body { background: #020617; overflow: hidden; }
+
+.fd-console {
+  position: fixed;
+  inset: 0;
+  background: #020617;
+  color: #dae2fd;
+  font-family: Inter, sans-serif;
+  z-index: 0;
+}
+.fd-console * { box-sizing: border-box; }
+
+/* ── SIDEBAR ── */
+.fd-console .fd-sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 260px; background: rgba(15,23,42,0.65); backdrop-filter: blur(16px); border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; z-index: 50; overflow-y: auto; transition: transform .3s ease; }
+.fd-console .fd-sidebar.collapsed { transform: translateX(-260px); }
+.fd-console .sidebar-logo { display: flex; align-items: center; gap: 12px; padding: 18px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.fd-console .logo-icon { width: 34px; height: 34px; border-radius: 8px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.3); display: flex; align-items: center; justify-content: center; }
+.fd-console .logo-title { font-size: 15px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.02em; }
+.fd-console .logo-sub { font-size: 9px; letter-spacing: .15em; color: #818cf8; text-transform: uppercase; margin-top: 2px; }
+.fd-console .nav-section { flex: 1; padding: 10px 8px; }
+.fd-console .nav-group { margin-bottom: 2px; }
+.fd-console .nav-group-btn { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 12px; border: none; background: none; cursor: pointer; color: #64748b; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; border-radius: 4px; transition: all .2s; }
+.fd-console .nav-group-btn:hover { color: #94a3b8; background: rgba(255,255,255,.03); }
+.fd-console .nav-group-btn .chevron { margin-left: auto; font-size: 16px; transition: transform .2s; }
+.fd-console .nav-group-btn.open .chevron { transform: rotate(180deg); }
+.fd-console .nav-group-btn .material-symbols-outlined { font-size: 17px; }
+.fd-console .nav-group-items { overflow: hidden; max-height: 0; transition: max-height .3s ease; }
+.fd-console .nav-group-items.open { max-height: 500px; }
+.fd-console .nav-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 12px 7px 16px; border: none; background: none; cursor: pointer; color: #64748b; font-size: 13px; font-weight: 500; text-align: left; border-radius: 4px; transition: all .2s; border-left: 2px solid transparent; margin: 1px 0; }
+.fd-console .nav-item:hover { color: #c0c1ff; background: rgba(192,193,255,.05); }
+.fd-console .nav-item.active { color: #c0c1ff; background: rgba(192,193,255,.08); border-left-color: #8083ff; }
+.fd-console .nav-item .material-symbols-outlined { font-size: 16px; }
+.fd-console .sidebar-footer { padding: 10px 8px; border-top: 1px solid rgba(255,255,255,.05); }
+.fd-console .footer-btn { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 12px; border: none; background: none; cursor: pointer; color: #475569; font-size: 13px; font-weight: 500; border-radius: 4px; transition: all .2s; }
+.fd-console .footer-btn:hover { color: #94a3b8; background: rgba(255,255,255,.03); }
+.fd-console .new-campaign-btn { margin: 8px; padding: 10px 16px; background: linear-gradient(135deg,#6366f1,#8083ff); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 20px rgba(99,102,241,.25); transition: all .2s; }
+.fd-console .new-campaign-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(99,102,241,.4); }
+
+/* ── TOPBAR ── */
+.fd-console .fd-topbar { position: fixed; top: 0; left: 260px; right: 0; height: 56px; background: rgba(2,6,23,.88); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.05); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 40; transition: left .3s ease; }
+.fd-console .fd-topbar.full { left: 0; }
+.fd-console .topbar-left { display: flex; align-items: center; gap: 10px; }
+.fd-console .sidebar-toggle { background: none; border: none; cursor: pointer; color: #64748b; padding: 5px; border-radius: 6px; display: flex; transition: all .2s; }
+.fd-console .sidebar-toggle:hover { color: #94a3b8; background: rgba(255,255,255,.05); }
+.fd-console .breadcrumb { font-size: 13px; color: #64748b; font-weight: 500; }
+.fd-console .page-title { font-size: 13px; color: #e2e8f0; font-weight: 600; margin-left: 6px; }
+.fd-console .topbar-right { display: flex; align-items: center; gap: 6px; }
+.fd-console .topbar-btn { background: none; border: none; cursor: pointer; color: #64748b; padding: 5px; border-radius: 6px; display: flex; transition: all .2s; }
+.fd-console .topbar-btn:hover { color: #94a3b8; background: rgba(255,255,255,.05); }
+.fd-console .plan-badge { background: rgba(192,193,255,.1); border: 1px solid rgba(192,193,255,.2); color: #c0c1ff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 4px; letter-spacing: .05em; text-transform: uppercase; }
+
+/* ── CONTENT ── */
+.fd-console .fd-content { position: fixed; left: 260px; top: 56px; right: 0; bottom: 96px; overflow-y: auto; transition: left .3s ease; }
+.fd-console .fd-content.full { left: 0; }
+.fd-console .page-fade-in { animation: fdPageFade .22s ease forwards; }
+@keyframes fdPageFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.fd-console .glass-card { background: rgba(15,23,42,.4); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.05); }
+.fd-console .glass-panel { background: rgba(15,23,42,.55); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.06); }
+.fd-console .activity-line { position: relative; }
+.fd-console .activity-line::before { content: ""; position: absolute; left: -17px; top: 24px; bottom: -24px; width: 1px; background: rgba(144,143,160,.2); }
+.fd-console .activity-line:last-child::before { display: none; }
+
+/* ── AGENT MINION BAR ── */
+.fd-console .fd-minions { position: fixed; bottom: 0; left: 260px; right: 0; height: 96px; background: rgba(6,14,32,.92); backdrop-filter: blur(16px); border-top: 1px solid rgba(99,102,241,.15); display: flex; align-items: center; justify-content: center; gap: 32px; z-index: 45; transition: left .3s ease; }
+.fd-console .fd-minions.full { left: 0; }
+.fd-console .minion-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; transition: transform .2s; }
+.fd-console .minion-wrap:hover { transform: translateY(-3px); }
+.fd-console .minion-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #64748b; transition: color .2s; }
+.fd-console .minion-wrap:hover .minion-label { color: #c0c1ff; }
+.fd-console .minion-status { font-size: 9px; color: #475569; letter-spacing: .05em; }
+
+/* ── SVG MINION ANIMATIONS ── */
+@keyframes blink { 0%,90%,100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes think-bob { 0%,100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-2px) rotate(1deg); } }
+@keyframes arm-wave { 0%,100% { transform: rotate(0deg); } 25% { transform: rotate(-30deg); } 75% { transform: rotate(20deg); } }
+@keyframes arm-type { 0%,100% { transform: rotate(10deg); } 50% { transform: rotate(-10deg); } }
+@keyframes arm-scan { 0% { transform: rotate(-20deg); } 100% { transform: rotate(20deg); } }
+@keyframes eye-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes screen-flicker { 0%,100% { opacity: 1; } 50% { opacity: .7; } }
+@keyframes gear-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes pulse-glow { 0%,100% { filter: drop-shadow(0 0 4px currentColor); } 50% { filter: drop-shadow(0 0 12px currentColor); } }
+@keyframes idle-sway { 0%,100% { transform: rotate(0deg); } 33% { transform: rotate(-2deg); } 66% { transform: rotate(2deg); } }
+.fd-console .minion-active .minion-body { animation: bob .8s ease-in-out infinite; }
+.fd-console .minion-thinking .minion-body { animation: think-bob 1.2s ease-in-out infinite; }
+.fd-console .minion-idle .minion-body { animation: idle-sway 3s ease-in-out infinite; }
+.fd-console .minion-active { color: #5de6ff; }
+.fd-console .minion-thinking { color: #818cf8; }
+.fd-console .minion-idle { color: #475569; }
+
+.fd-console .mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 45; display: none; }
+.fd-console .mobile-overlay.show { display: block; }
+
+@media (max-width: 768px) {
+  .fd-console .fd-sidebar { transform: translateX(-260px); }
+  .fd-console .fd-sidebar.mobile-open { transform: translateX(0); }
+  .fd-console .fd-topbar,
+  .fd-console .fd-content,
+  .fd-console .fd-minions { left: 0 !important; }
+  .fd-console .fd-minions { gap: 16px; padding: 0 8px; }
+}

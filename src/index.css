@@ -19,6 +19,69 @@
   --shadow-sb-card: 0px 0px 0.5px 0px rgba(0,0,0,0.14), 0px 1px 1px 0px rgba(0,0,0,0.24);
   --shadow-sb-nav: 0 1px 3px rgba(0,0,0,0.1), 0 2px 2px rgba(0,0,0,0.06), 0 0 2px rgba(0,0,0,0.07);
   --shadow-sb-frap: 0 0 6px rgba(0,0,0,0.24), 0 8px 12px rgba(0,0,0,0.14);
+
+  /* ── Fourdoor Console design tokens (dark-glass dashboard) ──
+     Ported from the fourdoor_ai.html mockup's Tailwind config so the console
+     screens' utility classes (text-on-surface, bg-primary, font-h1,
+     text-data-point, …) resolve in the Vite/Tailwind v4 build. These names do
+     not collide with the app's sb-* theme. Only the console uses them. */
+  --color-surface: #0b1326;
+  --color-surface-bright: #31394d;
+  --color-background: #0b1326;
+  --color-surface-dim: #0b1326;
+  --color-secondary: #5de6ff;
+  --color-on-background: #dae2fd;
+  --color-primary-container: #8083ff;
+  --color-error: #ffb4ab;
+  --color-outline-variant: #464554;
+  --color-surface-variant: #2d3449;
+  --color-outline: #908fa0;
+  --color-secondary-container: #00cbe6;
+  --color-surface-container-highest: #2d3449;
+  --color-surface-container-low: #131b2e;
+  --color-surface-container: #171f33;
+  --color-primary-fixed: #e1e0ff;
+  --color-on-surface-variant: #c7c4d7;
+  --color-on-surface: #dae2fd;
+  --color-on-primary: #1000a9;
+  --color-primary: #c0c1ff;
+  --color-surface-container-high: #222a3d;
+  --color-on-secondary: #00363e;
+  --color-tertiary-container: #ff516a;
+  --color-tertiary: #ffb2b7;
+
+  --font-body-main: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-h1: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-h2: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-data-point: "Space Grotesk", ui-monospace, monospace;
+  --font-bant-score: "Space Grotesk", ui-monospace, monospace;
+  --font-label-caps: "Space Grotesk", ui-monospace, monospace;
+
+  --text-body-main: 16px;
+  --text-body-main--line-height: 1.6;
+  --text-body-main--font-weight: 400;
+  --text-h1: 40px;
+  --text-h1--line-height: 1.2;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h1--font-weight: 700;
+  --text-h2: 30px;
+  --text-h2--line-height: 1.3;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 600;
+  --text-data-point: 24px;
+  --text-data-point--line-height: 1;
+  --text-data-point--letter-spacing: 0.05em;
+  --text-data-point--font-weight: 600;
+  --text-bant-score: 14px;
+  --text-bant-score--line-height: 1;
+  --text-bant-score--font-weight: 700;
+  --text-label-caps: 12px;
+  --text-label-caps--line-height: 1;
+  --text-label-caps--letter-spacing: 0.1em;
+  --text-label-caps--font-weight: 500;
+
+  --spacing-element-gap: 1.5rem;
+  --spacing-container-padding: 2rem;
 }
 
 @layer base {
