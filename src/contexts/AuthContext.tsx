@@ -1,12 +1,18 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useAuth0, User as Auth0User } from "@auth0/auth0-react";
-import { auth, googleProvider, db, handleFirestoreError, OperationType } from "../lib/firebase";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth, googleProvider, calendarProvider, db, handleFirestoreError, OperationType } from "../lib/firebase";
+import {
+  signInWithPopup,
+  reauthenticateWithPopup,
+  signOut,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  type User as FirebaseUser,
+} from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { UserProfile } from "../types";
 
 interface AuthContextType {
-  user: Auth0User | null;
+  user: FirebaseUser | null;
   profile: UserProfile | null;
   loading: boolean;
   signIn: () => Promise<{ isNewUser: boolean }>;
@@ -19,18 +25,60 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const {
-    user: auth0User,
-    isLoading,
-    isAuthenticated,
-    loginWithRedirect,
-    logout: auth0Logout,
-  } = useAuth0();
+// Map a Firebase Auth popup error to a user-facing message. Shared by the
+// login and Calendar-connect flows so both surface the same friendly text for
+// common cases (popup blocked/closed, provider disabled, unauthorized domain).
+function friendlyAuthError(error: unknown): string {
+  if (error && typeof error === "object") {
+    const code = (error as { code?: string }).code || "";
+    const message = (error as { message?: string }).message || "";
+    if (
+      code === "auth/popup-closed-by-user" ||
+      message.includes("popup-closed-by-user") ||
+      code === "auth/cancelled-popup-request" ||
+      message.includes("cancelled-popup-request")
+    ) {
+      return "The sign-in popup was closed or cancelled. If this app runs inside an iframe that blocks popups, try opening it in a new tab.";
+    }
+    if (code === "auth/popup-blocked" || message.includes("popup-blocked")) {
+      return "The browser blocked the sign-in popup. Please enable popups for this site, or open this application in a new tab.";
+    }
+    if (code === "auth/operation-not-allowed" || message.includes("operation-not-allowed")) {
+      return "Google sign-in is not enabled on this Firebase project. Please enable the Google provider under Authentication in your Firebase console.";
+    }
+    if (code === "auth/unauthorized-domain" || message.includes("unauthorized-domain")) {
+      return "This domain is not authorized for sign-in. Please add it to Authorized domains in your Firebase console settings.";
+    }
+    if (message) return `Authentication error: ${message}`;
+  }
+  return "Sign-in failed. Please try again.";
+}
 
+// Clamp an identity string from the OAuth provider before persisting it.
+// Values come from Google, but we still constrain type/length defensively so a
+// malformed/oversized value can't be written to Firestore.
+function sanitizeIdentityField(value: string | null | undefined, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim().slice(0, 256);
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  // Track Firebase auth state. Fires once on mount with the current user
+  // (or null), then on every sign-in / sign-out.
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setFirebaseUser(u);
+      setAuthLoading(false);
+    });
+    return unsubscribe;
+  }, []);
 
   const fetchProfile = async (uid: string) => {
     setProfileLoading(true);
@@ -50,10 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (isLoading) return;
+    if (authLoading) return;
 
-    if (isAuthenticated && auth0User?.sub) {
-      const uid = auth0User.sub;
+    if (firebaseUser?.uid) {
+      const uid = firebaseUser.uid;
       const initOrFetchProfile = async () => {
         setProfileLoading(true);
         try {
@@ -61,8 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userSnap = await getDoc(userRef);
           if (!userSnap.exists()) {
             const newProfile: Partial<UserProfile> = {
-              email: auth0User.email || "",
-              name: auth0User.name || "New User",
+              email: sanitizeIdentityField(firebaseUser.email, ""),
+              name: sanitizeIdentityField(firebaseUser.displayName, "New User"),
               plan: "starter",
               subscriptionStatus: "inactive",
               onboardingComplete: false,
@@ -83,66 +131,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setProfile(null);
     }
-  }, [isLoading, isAuthenticated, auth0User?.sub]);
+  }, [authLoading, firebaseUser?.uid]);
 
   const signIn = async (): Promise<{ isNewUser: boolean }> => {
-    await loginWithRedirect();
-    return { isNewUser: false };
+    // Google sign-in via Firebase popup, using the identity-only provider (no
+    // Calendar scope) so login consent stays minimal. The onAuthStateChanged
+    // effect above handles first-time Firestore profile creation; navigation in
+    // the UI is driven by profile.onboardingComplete, so isNewUser is
+    // informational. Rethrow a friendly message so callers (Landing) can show it.
+    try {
+      await signInWithPopup(auth, googleProvider);
+      return { isNewUser: false };
+    } catch (error) {
+      throw new Error(friendlyAuthError(error));
+    }
   };
 
   const logout = async () => {
     setAccessToken(null);
-    auth0Logout({ logoutParams: { returnTo: window.location.origin } });
+    await signOut(auth);
   };
 
   const refreshProfile = async () => {
-    if (auth0User?.sub) await fetchProfile(auth0User.sub);
+    const uid = auth.currentUser?.uid;
+    if (uid) await fetchProfile(uid);
   };
 
-  // Separate Google sign-in (via Firebase popup) used only to obtain a
-  // Calendar-scoped access token. Independent of the Auth0 identity above.
+  // Obtain a Calendar-scoped Google access token for the *already signed-in*
+  // user. Uses reauthenticateWithPopup against auth.currentUser so that picking
+  // a different Google account in the popup cannot silently switch the app's
+  // authenticated identity (and thus the loaded users/{uid} profile). Falls
+  // back to a plain popup only if somehow called while signed out.
   const connectGoogleCalendar = async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      const current = auth.currentUser;
+      const result = current
+        ? await reauthenticateWithPopup(current, calendarProvider)
+        : await signInWithPopup(auth, calendarProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         setAccessToken(credential.accessToken);
         return { success: true };
       }
       return { success: false, error: "No access token returned from Google." };
-    } catch (error: any) {
-      let friendlyMessage = "Failed to connect Google Calendar. Please try again.";
-      if (error && typeof error === "object") {
-        const code = error.code || "";
-        const message = error.message || "";
-
-        if (
-          code === "auth/popup-closed-by-user" ||
-          message.includes("popup-closed-by-user") ||
-          code === "auth/cancelled-popup-request" ||
-          message.includes("cancelled-popup-request")
-        ) {
-          friendlyMessage = "The Google Calendar connection popup was closed or cancelled. This app may run inside an iframe that blocks popups - try opening it in a new tab.";
-        } else if (code === "auth/popup-blocked" || message.includes("popup-blocked")) {
-          friendlyMessage = "The browser blocked the connection popup. Please enable popups for this site, or open this application in a new tab.";
-        } else if (code === "auth/operation-not-allowed" || message.includes("operation-not-allowed")) {
-          friendlyMessage = "Google sign-in is not enabled on this Firebase project. Please enable the Google provider under Authentication in your Firebase console.";
-        } else if (code === "auth/unauthorized-domain" || message.includes("unauthorized-domain")) {
-          friendlyMessage = "This domain is not authorized for OAuth in Firebase. Please add this domain to Authorized domains in your Firebase console settings.";
-        } else if (message) {
-          friendlyMessage = `Authentication error: ${message}`;
-        }
-      }
-      return { success: false, error: friendlyMessage };
+    } catch (error) {
+      return { success: false, error: friendlyAuthError(error) };
     }
   };
 
   return (
     <AuthContext.Provider
       value={{
-        user: auth0User ?? null,
+        user: firebaseUser,
         profile,
-        loading: isLoading || profileLoading,
+        loading: authLoading || profileLoading,
         signIn,
         logout,
         refreshProfile,

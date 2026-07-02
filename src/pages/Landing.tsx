@@ -21,7 +21,11 @@ export default function Landing() {
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
     } else {
-      await signIn();
+      try {
+        await signIn();
+      } catch (err) {
+        setErrorMsg(err instanceof Error ? err.message : "Sign-in failed. Please try again.");
+      }
     }
   };
 

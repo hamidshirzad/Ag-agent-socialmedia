@@ -14,8 +14,18 @@ import firebaseConfig from "../../firebase-applet-config.json";
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+// Provider for basic login: identity only (openid/email/profile by default).
+// Kept free of extra scopes so the sign-in consent screen stays minimal and a
+// user declining optional permissions can never block login.
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope("https://www.googleapis.com/auth/calendar");
+
+// Separate provider used only when the user explicitly connects Google
+// Calendar. Carries the Calendar scope so the access token can call the
+// Calendar API. Splitting it from googleProvider keeps Calendar consent out of
+// the basic login flow.
+export const calendarProvider = new GoogleAuthProvider();
+calendarProvider.addScope("https://www.googleapis.com/auth/calendar");
 
 export enum OperationType {
   CREATE = 'create',
