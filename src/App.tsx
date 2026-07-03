@@ -6,7 +6,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import Landing from "./pages/Landing";
-import DashboardConsole from "./console/DashboardConsole";
+import Dashboard from "./pages/Dashboard";
 import Onboarding from "./pages/Onboarding";
 import ContentEngine from "./pages/ContentEngine";
 import LeadInbox from "./pages/LeadInbox";
@@ -26,7 +26,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/onboarding" element={<ProtectedRoute requiresOnboarding><Onboarding /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><DashboardConsole /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
           <Route path="/content" element={<ProtectedRoute><ContentEngine /></ProtectedRoute>} />
           <Route path="/leads" element={<ProtectedRoute><LeadInbox /></ProtectedRoute>} />

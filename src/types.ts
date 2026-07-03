@@ -8,11 +8,6 @@ export interface UserProfile {
   plan: 'starter' | 'pro' | 'agency';
   subscriptionStatus: string;
   paypalSubscriptionId?: string;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
-  stripePriceId?: string;
-  subscriptionRenewsAt?: string;
-  subscriptionCancelledAt?: string;
   onboardingComplete: boolean;
   createdAt: string;
   apiKeys?: {
