@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import {
   NAV, PAGE_META, GROUP_LABELS, type ScreenId, type GroupId,
@@ -34,12 +34,20 @@ export default function DashboardConsole() {
   const [openGroups, setOpenGroups] = useState<Set<GroupId>>(new Set(["dashboard"]));
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Give the console a normal root font-size + locked scroll while mounted.
   useEffect(() => {
     document.documentElement.classList.add("fd-console-active");
     return () => document.documentElement.classList.remove("fd-console-active");
   }, []);
+
+  // Reset the content scroll position on navigation — otherwise a new screen
+  // opens partway down after scrolling a long previous one (the scroll lives on
+  // .fd-content, which persists across screen swaps).
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0 });
+  }, [screen]);
 
   const meta = PAGE_META[screen];
 
@@ -130,7 +138,7 @@ export default function DashboardConsole() {
       </nav>
 
       {/* CONTENT */}
-      <div className={`fd-content${collapsed ? " full" : ""}`}>
+      <div ref={contentRef} className={`fd-content${collapsed ? " full" : ""}`}>
         {screen === "main_dashboard_overview" ? (
           <div className="page-fade-in" dangerouslySetInnerHTML={{ __html: MAIN_DASHBOARD_HTML }} />
         ) : (

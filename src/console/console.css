@@ -98,7 +98,9 @@ html.fd-console-active body { background: #020617; overflow: hidden; }
 .fd-console .minion-thinking { color: #818cf8; }
 .fd-console .minion-idle { color: #475569; }
 
-.fd-console .mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 45; display: none; }
+/* Above the minion bar (z-45), below the sidebar (z-50), so an open mobile
+   drawer dims and blocks the bottom bar instead of leaving it clickable. */
+.fd-console .mobile-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 46; display: none; }
 .fd-console .mobile-overlay.show { display: block; }
 
 @media (max-width: 768px) {
