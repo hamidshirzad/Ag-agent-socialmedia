@@ -54,8 +54,9 @@ export function MinionBar({
         />
       ))}
 
-      {/* Live ticker */}
-      <div className="flex flex-col items-center gap-1 px-4 border-l border-r border-white/[.06]">
+      {/* Live ticker — hidden on narrow mobile so the four agents fit without
+          clipping (the bar's body has overflow:hidden). */}
+      <div className="hidden sm:flex flex-col items-center gap-1 px-4 border-l border-r border-white/[.06]">
         <div className="text-[9px] tracking-[.15em] text-[#475569] uppercase font-semibold">
           System Status
         </div>
