@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import {
   NAV, PAGE_META, GROUP_LABELS, type ScreenId, type GroupId,
@@ -44,8 +44,9 @@ export default function DashboardConsole() {
 
   // Reset the content scroll position on navigation — otherwise a new screen
   // opens partway down after scrolling a long previous one (the scroll lives on
-  // .fd-content, which persists across screen swaps).
-  useEffect(() => {
+  // .fd-content, which persists across screen swaps). useLayoutEffect runs
+  // before paint so the new screen never flashes at the old scrollTop.
+  useLayoutEffect(() => {
     contentRef.current?.scrollTo({ top: 0 });
   }, [screen]);
 
