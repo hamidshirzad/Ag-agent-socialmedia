@@ -40,6 +40,7 @@ export default function App() {
               <Route path="/outreach" element={<ProtectedRoute><Outreach /></ProtectedRoute>} />
               <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
               <Route path="/scoring" element={<ProtectedRoute><ScoringRules /></ProtectedRoute>} />
+              <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
               <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
@@ -50,26 +51,5 @@ export default function App() {
         </AuthProvider>
       </ToastProvider>
     </Auth0Provider>
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/onboarding" element={<ProtectedRoute requiresOnboarding><Onboarding /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
-          <Route path="/content" element={<ProtectedRoute><ContentEngine /></ProtectedRoute>} />
-          <Route path="/leads" element={<ProtectedRoute><LeadInbox /></ProtectedRoute>} />
-          <Route path="/outreach" element={<ProtectedRoute><Outreach /></ProtectedRoute>} />
-          <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
-          <Route path="/scoring" element={<ProtectedRoute><ScoringRules /></ProtectedRoute>} />
-          <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
-          <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
   );
 }

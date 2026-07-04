@@ -3,6 +3,38 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import request from "supertest";
+
+// Mock Firestore so tests don't require network access or credentials.
+vi.mock("firebase-admin", () => ({
+  default: {
+    apps: [],
+    initializeApp: vi.fn(),
+    credential: { cert: vi.fn(), applicationDefault: vi.fn() },
+  },
+}));
+vi.mock("firebase-admin/firestore", () => {
+  const doc = {
+    ref: { update: vi.fn().mockResolvedValue(undefined) },
+  };
+  const query = {
+    where: vi.fn(() => query),
+    get: vi.fn().mockResolvedValue({ empty: false, docs: [doc] }),
+  };
+  const collection = {
+    add: vi.fn().mockResolvedValue({ id: "mock-id" }),
+    doc: vi.fn(() => ({
+      get: vi.fn().mockResolvedValue({ exists: false, data: () => ({}) }),
+      set: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockResolvedValue(undefined),
+    })),
+    where: query.where,
+    get: query.get,
+  };
+  return {
+    getFirestore: vi.fn(() => ({ collection: vi.fn(() => collection) })),
+  };
+});
+
 import { createApp } from "./server";
 
 describe("Express Server API", () => {

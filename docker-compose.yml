@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - APP_URL=${APP_URL:-http://localhost:3000}
+      - VITE_API_URL=/api
+      - VITE_APP_URL=${APP_URL:-http://localhost:3000}
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+      - VITE_FACEBOOK_APP_ID=${VITE_FACEBOOK_APP_ID}
+      - VITE_LINKEDIN_CLIENT_ID=${VITE_LINKEDIN_CLIENT_ID}
+      - VITE_X_CLIENT_ID=${VITE_X_CLIENT_ID}
+      - VITE_TIKTOK_CLIENT_ID=${VITE_TIKTOK_CLIENT_ID}
+      - LINKEDIN_CLIENT_SECRET=${LINKEDIN_CLIENT_SECRET}
+      - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET}
+      - X_CLIENT_SECRET=${X_CLIENT_SECRET}
+      - TIKTOK_CLIENT_SECRET=${TIKTOK_CLIENT_SECRET}
+      - VITE_PAYPAL_CLIENT_ID=${VITE_PAYPAL_CLIENT_ID}
+      - VITE_PAYPAL_MODE=${VITE_PAYPAL_MODE:-sandbox}
+      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET}
+      - PAYPAL_WEBHOOK_ID=${PAYPAL_WEBHOOK_ID}
+      - PAYPAL_PLAN_ID_STARTER=${PAYPAL_PLAN_ID_STARTER}
+      - PAYPAL_PLAN_ID_PRO=${PAYPAL_PLAN_ID_PRO}
+      - PAYPAL_PLAN_ID_AGENCY=${PAYPAL_PLAN_ID_AGENCY}
+      - TIKTOK_CLIENT_KEY=${TIKTOK_CLIENT_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - VITE_CALENDLY_BOOKING_LINK=${VITE_CALENDLY_BOOKING_LINK}
+    env_file:
+      - .env
+    volumes:
+      - ./firebase-applet-config.json:/app/firebase-applet-config.json:ro

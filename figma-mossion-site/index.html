@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fourdoor AI Growth Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="liquid liquid-top" aria-hidden="true"></div>
+    <div class="liquid liquid-bottom" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Fourdoor home">
+        <span class="brand-mark"></span>
+        Fourdoor
+      </a>
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="#problem">Problem</a>
+        <a href="#engine">Engine</a>
+        <a href="#features">Features</a>
+        <a href="#model">Model</a>
+      </nav>
+      <button class="header-action" id="openCommand" type="button">Launch</button>
+    </header>
+
+    <main id="top">
+
+      <!-- ── Hero ── -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="chips" aria-label="Project metadata">
+          <span>Apr 2026</span>
+          <span>AI Marketing</span>
+        </div>
+        <h1 id="hero-title">
+          <span class="desktop-title">Fourdoor AI Growth</span>
+          <span class="desktop-title">Engine — Autonomous</span>
+          <span class="desktop-title">Marketing, Built</span>
+          <span class="desktop-title">to Scale.</span>
+          <span class="mobile-title">Fourdoor AI</span>
+          <span class="mobile-title">Growth Engine</span>
+          <span class="mobile-title">Autonomous</span>
+          <span class="mobile-title">Marketing, Built</span>
+          <span class="mobile-title">to Scale.</span>
+        </h1>
+        <p class="hero-sub">Stop wasting hours on content that doesn't convert. Fourdoor turns strategy into autonomous pipeline — across every channel, every day.</p>
+        <div class="hero-actions">
+          <a class="primary-button" href="#mission">Start a Mission</a>
+          <button class="ghost-button" id="runDemo" type="button">Run Demo</button>
+        </div>
+      </section>
+
+      <!-- ── Problem ── -->
+      <section class="content-section" id="problem" aria-labelledby="problem-title">
+        <div class="section-header">
+          <p class="section-label">The Problem</p>
+          <h2 id="problem-title">Growth teams are stuck doing work that shouldn't be manual.</h2>
+        </div>
+        <div class="problem-grid">
+          <div class="problem-card">
+            <div class="problem-icon">01</div>
+            <h3>Manual creation</h3>
+            <p>Teams spend 70% of their time writing, scheduling, and posting — not strategy. Every post is a sprint.</p>
+          </div>
+          <div class="problem-card">
+            <div class="problem-icon">02</div>
+            <h3>No real system</h3>
+            <p>Tools don't talk to each other. Audience insights live in one place, content in another, results nowhere useful.</p>
+          </div>
+          <div class="problem-card">
+            <div class="problem-icon">03</div>
+            <h3>Generic content</h3>
+            <p>Spray-and-pray campaigns with no personalization. The same message to everyone means a connection with no one.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Solution / Funnel ── -->
+      <section class="content-section" id="solution" aria-labelledby="solution-title">
+        <div class="solution-layout">
+          <div class="solution-copy">
+            <p class="section-label">Our Solution</p>
+            <h2 id="solution-title">AI Growth Engine — fully autonomous marketing.</h2>
+            <p class="body-text">Fourdoor connects strategy directly to execution. One mission brief becomes audience clusters, content variants, scheduled posts, live DMs, and real-time performance learning — without a single human touch point in between.</p>
+            <ul class="solution-list">
+              <li>
+                <span class="check-icon" aria-hidden="true">✓</span>
+                Brief once, execute everywhere
+              </li>
+              <li>
+                <span class="check-icon" aria-hidden="true">✓</span>
+                Fully automated multi-platform publishing
+              </li>
+              <li>
+                <span class="check-icon" aria-hidden="true">✓</span>
+                Personalized DM sequences at scale
+              </li>
+              <li>
+                <span class="check-icon" aria-hidden="true">✓</span>
+                Continuous signal feedback and rebalancing
+              </li>
+            </ul>
+          </div>
+          <div class="funnel-visual" aria-label="AI Growth Engine funnel diagram">
+            <div class="funnel-step f1">
+              <span class="funnel-label">Strategy Brief</span>
+            </div>
+            <div class="funnel-step f2">
+              <span class="funnel-label">Audience Clusters</span>
+            </div>
+            <div class="funnel-step f3">
+              <span class="funnel-label">Content Variants</span>
+            </div>
+            <div class="funnel-step f4">
+              <span class="funnel-label">Multi-Platform Launch</span>
+            </div>
+            <div class="funnel-step f5">
+              <span class="funnel-label">Signal Learning</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── System Overview / Dashboard ── -->
+      <section class="dashboard-shell" id="mission" aria-label="Autonomous marketing dashboard">
+        <aside class="side-rail" aria-label="Growth engine sections">
+          <button class="rail-item is-active" type="button" data-view="mission">
+            <span class="rail-icon">M</span>
+            Mission
+          </button>
+          <button class="rail-item" type="button" data-view="audience">
+            <span class="rail-icon">A</span>
+            Audience
+          </button>
+          <button class="rail-item" type="button" data-view="content">
+            <span class="rail-icon">C</span>
+            Content
+          </button>
+          <button class="rail-item" type="button" data-view="signals">
+            <span class="rail-icon">S</span>
+            Signals
+          </button>
+        </aside>
+
+        <section class="workspace">
+          <div class="workspace-top">
+            <div>
+              <p class="section-label">Mission Control</p>
+              <h2 id="workspaceTitle">Launch a growth mission</h2>
+            </div>
+            <div class="status-pill" id="engineStatus">Engine idle</div>
+          </div>
+
+          <div class="mission-grid">
+            <form class="mission-panel" id="missionForm">
+              <label>
+                Campaign name
+                <input id="campaignName" type="text" value="Autonomous pipeline lift" />
+              </label>
+              <label>
+                Channel focus
+                <select id="channelFocus">
+                  <option>LinkedIn + Email</option>
+                  <option>Paid Social</option>
+                  <option>Search + Retargeting</option>
+                  <option>Partner Launch</option>
+                </select>
+              </label>
+              <div class="range-field">
+                <div>
+                  <label for="budgetRange">Monthly budget</label>
+                  <strong id="budgetValue">$42k</strong>
+                </div>
+                <input id="budgetRange" type="range" min="12" max="120" value="42" />
+              </div>
+              <div class="toggle-row">
+                <span>Autonomous optimization</span>
+                <button class="toggle is-on" id="autoToggle" type="button" aria-pressed="true"><span></span></button>
+              </div>
+              <button class="primary-button full" type="submit">Generate Mission</button>
+            </form>
+
+            <div class="preview-panel" aria-live="polite">
+              <div class="preview-head">
+                <span class="pulse-dot"></span>
+                <span id="previewTitle">Autonomous pipeline lift</span>
+              </div>
+              <div class="metric-row">
+                <div>
+                  <span>Forecast</span>
+                  <strong id="forecastValue">+31%</strong>
+                </div>
+                <div>
+                  <span>Leads</span>
+                  <strong id="leadValue">1,284</strong>
+                </div>
+                <div>
+                  <span>Confidence</span>
+                  <strong id="confidenceValue">87%</strong>
+                </div>
+              </div>
+              <div class="signal-map" id="signalMap" aria-label="Live campaign signal map">
+                <span style="--x: 14%; --y: 24%"></span>
+                <span style="--x: 48%; --y: 38%"></span>
+                <span style="--x: 73%; --y: 18%"></span>
+                <span style="--x: 36%; --y: 72%"></span>
+                <span style="--x: 86%; --y: 68%"></span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ── Key Features ── -->
+      <section class="content-section" id="features" aria-labelledby="features-title">
+        <div class="section-header">
+          <p class="section-label">Key Features</p>
+          <h2 id="features-title">Everything the engine needs to run without you.</h2>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-dot" style="background: var(--cyan)"></div>
+            <h3>Content generation</h3>
+            <p>AI drafts, refines, and schedules posts tailored to each audience segment — brand-consistent, every time.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-dot" style="background: var(--blue)"></div>
+            <h3>Multi-platform publishing</h3>
+            <p>LinkedIn, email, Instagram, X — one brief, distributed everywhere with platform-native formatting.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-dot" style="background: var(--pink)"></div>
+            <h3>DM automation</h3>
+            <p>Personalized outreach at scale. The engine identifies warm signals and opens conversations automatically.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-dot" style="background: var(--green)"></div>
+            <h3>Lead tracking</h3>
+            <p>Every interaction is logged, scored, and fed back into the engine to rebalance spend and messaging in real time.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Engine Steps ── -->
+      <section class="engine-band" id="engine">
+        <div class="band-copy">
+          <p class="section-label">Engine Loop</p>
+          <h2>Plan, create, launch, learn, and rebalance — without losing human control.</h2>
+        </div>
+        <div class="step-list" id="stepList">
+          <button class="step is-complete" type="button">01 Strategy brief</button>
+          <button class="step is-complete" type="button">02 Audience clusters</button>
+          <button class="step is-active" type="button">03 Creative variants</button>
+          <button class="step" type="button">04 Spend rebalance</button>
+        </div>
+      </section>
+
+      <!-- ── Business Model ── -->
+      <section class="content-section" id="model" aria-labelledby="model-title">
+        <div class="section-header">
+          <p class="section-label">Business Model</p>
+          <h2 id="model-title">Recurring revenue built on measurable impact.</h2>
+        </div>
+        <div class="biz-grid">
+          <div class="biz-card">
+            <p class="biz-number">01</p>
+            <h3>Content generation</h3>
+            <p>Teams subscribe for always-on content creation — posts, emails, and sequences that never stop publishing.</p>
+            <div class="biz-tag">Core product</div>
+          </div>
+          <div class="biz-card biz-featured">
+            <p class="biz-number">02</p>
+            <h3>Recurring business</h3>
+            <p>Monthly SaaS seats tied to active campaigns. The more missions they run, the stickier the platform becomes.</p>
+            <div class="biz-tag">Primary revenue</div>
+          </div>
+          <div class="biz-card">
+            <p class="biz-number">03</p>
+            <h3>SaaS upswells</h3>
+            <p>Power features — advanced signal analytics, CRM sync, white-label exports — unlock on higher tiers.</p>
+            <div class="biz-tag">Expansion</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Campaign Queue ── -->
+      <section class="campaigns" id="campaigns">
+        <div class="workspace-top">
+          <div>
+            <p class="section-label">Campaign Queue</p>
+            <h2>Live autonomous work</h2>
+          </div>
+          <div class="segmented" aria-label="Campaign filter">
+            <button class="is-active" type="button" data-filter="all">All</button>
+            <button type="button" data-filter="active">Active</button>
+            <button type="button" data-filter="review">Review</button>
+          </div>
+        </div>
+        <div class="campaign-table" id="campaignTable"></div>
+      </section>
+
+      <!-- ── Go-to-Market ── -->
+      <section class="content-section gtm-section" id="gtm" aria-labelledby="gtm-title">
+        <div class="section-header">
+          <p class="section-label">Go-To-Market Strategy</p>
+          <h2 id="gtm-title">Three vectors to grow the platform fast.</h2>
+        </div>
+        <div class="gtm-grid">
+          <div class="gtm-card">
+            <div class="gtm-num">Growth Engine</div>
+            <h3>Founders first</h3>
+            <p>Launch into founder communities on LinkedIn. Use the product itself to generate the inbound — dogfooding as GTM.</p>
+          </div>
+          <div class="gtm-card">
+            <div class="gtm-num">Free Tier</div>
+            <h3>Freemium entry</h3>
+            <p>Let users run one live mission free. Viral loops from branded posts do the acquisition. Convert on the second mission.</p>
+          </div>
+          <div class="gtm-card">
+            <div class="gtm-num">Partnerships</div>
+            <h3>Agency channel</h3>
+            <p>White-label for growth agencies managing 10+ clients. They bring distribution, we bring the engine.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Closing CTA ── -->
+      <section class="cta-section" aria-labelledby="cta-title">
+        <div class="cta-grid-bg" aria-hidden="true"></div>
+        <div class="cta-inner">
+          <p class="section-label">Own the Future</p>
+          <h2 id="cta-title">The brands that automate growth today will own their markets tomorrow.</h2>
+          <p class="cta-sub">Join the early access programme and get your first autonomous mission running this week.</p>
+          <div class="cta-actions">
+            <button class="primary-button cta-btn" id="ctaLaunch" type="button">Get Early Access</button>
+            <a class="ghost-button cta-btn" href="#problem">See how it works</a>
+          </div>
+          <p class="cta-fine">Built by <strong>Fourdoor AI</strong> · hameed.sherzad22@gmail.com</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ── Modal ── -->
+    <div class="command-modal" id="commandModal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <button class="modal-close" id="closeCommand" type="button" aria-label="Close">×</button>
+        <h2 id="modalTitle">Launch sequence armed</h2>
+        <p>Your mission plan is staged. Adjust the budget, pick a channel, then generate the next autonomous run.</p>
+        <button class="primary-button full" id="modalAction" type="button">Start Engine</button>
+      </div>
+    </div>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
