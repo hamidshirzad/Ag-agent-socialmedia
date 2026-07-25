@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { useAuth } from "../contexts/AuthContext";
+import { useNotifications } from "../contexts/NotificationContext";
 import { 
   CreditCard, 
   CheckCircle2, 
@@ -64,7 +65,8 @@ const PLANS = [
 ];
 
 export default function Billing() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const { addToast, addNotification } = useNotifications();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   const paypalOptions = {
@@ -163,7 +165,30 @@ export default function Billing() {
                           });
                         }}
                         onApprove={async (data, actions) => {
-                          alert(`Subscription successful! Transaction ID: ${data.subscriptionID}`);
+                          addToast({
+                            title: "Subscription Activated",
+                            message: `Successfully registered ${plan.name} Edition! Transaction ID: ${data.subscriptionID}`,
+                            type: "success"
+                          });
+                          await addNotification(
+                            "Billing Subscription Modified",
+                            `Workspace tier transitioned to ${plan.name} Edition. TransID: ${data.subscriptionID}`,
+                            "billing",
+                            { plan: plan.id, amount: plan.price }
+                          );
+                          try {
+                            const { db } = await import("../lib/firebase");
+                            const { doc, updateDoc } = await import("firebase/firestore");
+                            if (user?.uid) {
+                              await updateDoc(doc(db, "users", user.uid), {
+                                plan: plan.id,
+                                subscriptionStatus: "active"
+                              });
+                            }
+                          } catch (e) {
+                            console.error("Failed to persist upgraded tier to database:", e);
+                          }
+                          setSelectedPlan(null);
                         }}
                       />
                     </PayPalScriptProvider>

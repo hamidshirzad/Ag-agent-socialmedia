@@ -86,6 +86,23 @@ service cloud.firestore {
               && data.keys().hasAll(['userId', 'email', 'name', 'role', 'status']);
         }
       }
+
+      // Sub-collection: Notifications
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidNotification(incoming());
+        allow delete: if isOwner(userId);
+
+        function isValidNotification(data) {
+          return data.userId == request.auth.uid
+              && data.title is string && data.title.size() <= 200
+              && data.message is string && data.message.size() <= 1000
+              && data.type in ['lead', 'billing', 'system']
+              && data.isRead is bool
+              && data.createdAt is string
+              && data.keys().hasAll(['userId', 'title', 'message', 'type', 'isRead', 'createdAt']);
+        }
+      }
     }
 
     // --- Posts ---
