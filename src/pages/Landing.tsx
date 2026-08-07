@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
 export default function Landing() {
-  const { signIn, user, profile, loading } = useAuth();
+  const { signIn, signInDemo, user, profile, loading } = useAuth();
   const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -21,7 +21,23 @@ export default function Landing() {
     if (user) {
       navigate(profile?.onboardingComplete ? "/dashboard" : "/onboarding");
     } else {
-      await signIn();
+      const res = await signIn();
+      if (res && res.success) {
+        navigate(res.isNewUser ? "/onboarding" : "/dashboard");
+      } else if (res && res.error) {
+        setErrorMsg(res.error);
+      }
+    }
+  };
+
+  const handleDemoStart = async () => {
+    if (loading) return;
+    setErrorMsg(null);
+    const res = await signInDemo();
+    if (res && res.success) {
+      navigate("/dashboard");
+    } else if (res && res.error) {
+      setErrorMsg(res.error);
     }
   };
 
@@ -337,20 +353,31 @@ export default function Landing() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 2, duration: 1 }}
-          className="flex gap-4"
+          className="flex flex-col sm:flex-row gap-4"
         >
-          <button 
-            onClick={handleStart}
-            className="font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-8 py-3.5 rounded-[3px] bg-[linear-gradient(135deg,#1a6fff,#00e5ff)] text-[#00000f] shadow-[0_0_30px_rgba(0,229,255,0.3)] hover:shadow-[0_0_60px_rgba(0,229,255,0.6)] hover:-translate-y-0.5 transition-all"
-          >
-            Launch Mission
-          </button>
-          <button
-            onClick={handleStart}
-            className="font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-8 py-3.5 rounded-[3px] bg-transparent text-[#00e5ff] border border-[#00e5ff]/40 hover:bg-[#00e5ff]/10 hover:border-[#00e5ff] hover:-translate-y-0.5 transition-all"
-          >
-            Explore Data
-          </button>
+          {user ? (
+            <button 
+              onClick={handleStart}
+              className="font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-8 py-3.5 rounded-[3px] bg-[linear-gradient(135deg,#1a6fff,#00e5ff)] text-[#00000f] shadow-[0_0_30px_rgba(0,229,255,0.3)] hover:shadow-[0_0_60px_rgba(0,229,255,0.6)] hover:-translate-y-0.5 transition-all cursor-pointer"
+            >
+              Enter Dashboard
+            </button>
+          ) : (
+            <>
+              <button 
+                onClick={handleStart}
+                className="font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-8 py-3.5 rounded-[3px] bg-[linear-gradient(135deg,#1a6fff,#00e5ff)] text-[#00000f] shadow-[0_0_30px_rgba(0,229,255,0.3)] hover:shadow-[0_0_60px_rgba(0,229,255,0.6)] hover:-translate-y-0.5 transition-all cursor-pointer"
+              >
+                Launch with Google
+              </button>
+              <button 
+                onClick={handleDemoStart}
+                className="font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-8 py-3.5 rounded-[3px] bg-transparent text-[#00e5ff] border border-[#00e5ff]/40 hover:bg-[#00e5ff]/10 hover:border-[#00e5ff] hover:-translate-y-0.5 transition-all cursor-pointer"
+              >
+                ⚡ Enter Demo Sandbox
+              </button>
+            </>
+          )}
         </motion.div>
       </main>
 
@@ -400,12 +427,19 @@ export default function Landing() {
 
               <div className="flex flex-col gap-3 font-sans">
                 <button
+                  onClick={handleDemoStart}
+                  className="w-full font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-5 py-3 rounded bg-[linear-gradient(135deg,#00e5ff,#7b2fff)] text-black hover:shadow-[0_0_20px_rgba(0,229,255,0.5)] transition-all cursor-pointer text-center font-bold"
+                >
+                  ⚡ Enter Demo Sandbox (Instant Bypass)
+                </button>
+
+                <button
                   onClick={() => {
                     window.open(window.location.href, "_blank");
                   }}
                   className="w-full font-['Orbitron'] text-[0.65rem] font-bold tracking-[0.25em] uppercase px-5 py-3 rounded bg-[linear-gradient(135deg,#ff3b3b,#ff8080)] text-black hover:shadow-[0_0_20px_rgba(255,59,59,0.5)] transition-all cursor-pointer text-center"
                 >
-                  🚀 Launch in New Tab (Recommended)
+                  🚀 Launch in New Tab
                 </button>
                 
                 <button

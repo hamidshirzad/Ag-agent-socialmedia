@@ -134,6 +134,104 @@ export default function Dashboard() {
   // Trajectory view configuration
   const [timeframe, setTimeframe] = useState<string>("7d");
   const [campaignMetric, setCampaignMetric] = useState<'rate' | 'leads'>('rate');
+
+  // Daily Lead Growth & Campaign Conversion Rates Interactive State
+  const [dailyGrowthData, setDailyGrowthData] = useState([
+    { date: 'Jun 15', leadsAdded: 18, conversionRate: 3.2, activeCampaigns: 2 },
+    { date: 'Jun 16', leadsAdded: 24, conversionRate: 3.5, activeCampaigns: 2 },
+    { date: 'Jun 17', leadsAdded: 15, conversionRate: 3.1, activeCampaigns: 2 },
+    { date: 'Jun 18', leadsAdded: 32, conversionRate: 4.2, activeCampaigns: 3 },
+    { date: 'Jun 19', leadsAdded: 28, conversionRate: 4.0, activeCampaigns: 3 },
+    { date: 'Jun 20', leadsAdded: 35, conversionRate: 4.8, activeCampaigns: 3 },
+    { date: 'Jun 21', leadsAdded: 42, conversionRate: 5.2, activeCampaigns: 3 },
+    { date: 'Jun 22', leadsAdded: 38, conversionRate: 4.9, activeCampaigns: 3 },
+    { date: 'Jun 23', leadsAdded: 45, conversionRate: 5.5, activeCampaigns: 4 },
+    { date: 'Jun 24', leadsAdded: 52, conversionRate: 6.1, activeCampaigns: 4 },
+    { date: 'Jun 25', leadsAdded: 48, conversionRate: 5.8, activeCampaigns: 4 },
+    { date: 'Jun 26', leadsAdded: 58, conversionRate: 6.5, activeCampaigns: 4 },
+    { date: 'Jun 27', leadsAdded: 64, conversionRate: 7.2, activeCampaigns: 4 },
+    { date: 'Jun 28', leadsAdded: 70, conversionRate: 7.8, activeCampaigns: 4 },
+  ]);
+
+  const [leadFilterCampaign, setLeadFilterCampaign] = useState<string>("All Campaigns");
+  const [leadFilterDays, setLeadFilterDays] = useState<number>(14);
+  const [simulationAlert, setSimulationAlert] = useState<string | null>(null);
+
+  // Filtered and dynamically scaled data based on campaign & days selected
+  const getFilteredGrowthData = () => {
+    // Slice by days limit
+    const sliced = dailyGrowthData.slice(-leadFilterDays);
+    
+    // Adjust factors based on chosen campaign to simulate real sub-campaign performance
+    return sliced.map(d => {
+      let multiplierLeads = 1;
+      let multiplierConv = 1;
+      
+      if (leadFilterCampaign === "Q3 SaaS Outreach") {
+        multiplierLeads = 0.45;
+        multiplierConv = 1.15;
+      } else if (leadFilterCampaign === "Fintech Founders Focus") {
+        multiplierLeads = 0.35;
+        multiplierConv = 0.85;
+      } else if (leadFilterCampaign === "Growth Hack Webinar") {
+        multiplierLeads = 0.20;
+        multiplierConv = 1.40;
+      }
+      
+      return {
+        ...d,
+        leadsAdded: Math.max(1, Math.round(d.leadsAdded * multiplierLeads)),
+        conversionRate: +(d.conversionRate * multiplierConv).toFixed(1)
+      };
+    });
+  };
+
+  const currentGrowthData = getFilteredGrowthData();
+
+  const handleSimulateLeadIntake = () => {
+    const leadsInbound = Math.floor(Math.random() * 8) + 6; // 6 to 13 leads
+    const conversionBoost = +(Math.random() * 0.4 + 0.1).toFixed(2); // 0.1% to 0.5% boost
+
+    setDailyGrowthData(prev => {
+      const copy = [...prev];
+      const lastIndex = copy.length - 1;
+      copy[lastIndex] = {
+        ...copy[lastIndex],
+        leadsAdded: copy[lastIndex].leadsAdded + leadsInbound,
+        conversionRate: +(copy[lastIndex].conversionRate + conversionBoost).toFixed(1)
+      };
+      return copy;
+    });
+
+    setSimulationAlert(`Neural Signal Ingested: +${leadsInbound} new leads inbound! Rate adjusted by +${conversionBoost}%!`);
+    setTimeout(() => {
+      setSimulationAlert(null);
+    }, 4000);
+  };
+
+  const CustomGrowthTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-sb-house text-white p-6 rounded-[12px] shadow-xl border border-white/10 text-[1.2rem] space-y-3 font-sans">
+          <p className="font-bold border-b border-white/15 pb-2 text-sb-gold">{label}</p>
+          <div className="space-y-1">
+            {payload.map((entry: any, i: number) => (
+              <div key={i} className="flex items-center justify-between gap-8">
+                <span className="opacity-70 font-medium flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color || entry.stroke }} />
+                  {entry.name}:
+                </span>
+                <span className="font-bold text-white">
+                  {entry.name.includes("Rate") ? `${entry.value}%` : entry.value.toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
   
   // Dynamic metrics calculated from the 7d data (first values to today comparisons)
   const calculateTrends = () => {
@@ -385,6 +483,187 @@ export default function Dashboard() {
             <div className="text-[1.05rem] text-black/40 pl-8 -mt-4 uppercase tracking-wider font-extrabold flex items-center gap-1.5">
               <span className={cn("w-2 h-2 rounded-full", visibleMetrics.replies ? "bg-sb-house" : "bg-neutral-300")} />
               {visibleMetrics.replies ? "Rendered in Chart" : "Click to view in Chart"}
+            </div>
+          </div>
+        </section>
+
+        {/* Daily Lead Growth & Campaign Conversion Rates Intelligence Visualizer */}
+        <section className="bg-white p-10 rounded-[12px] sb-shadow-card mb-16 flex flex-col justify-between" id="lead-growth-visualizer">
+          <div>
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10 border-b border-black/5 pb-6">
+              <div>
+                <h3 className="text-sb-green font-bold text-[1.8rem] uppercase tracking-widest leading-none flex items-center gap-3 mb-2">
+                  <TrendingUp size={20} className="text-sb-accent" />
+                  Lead Growth & Conversion Intelligence
+                </h3>
+                <p className="text-[1.2rem] text-black/45 font-semibold uppercase tracking-[0.2em] italic">
+                  Monitoring daily lead acquisitions and campaign conversion velocity over time
+                </p>
+              </div>
+
+              {/* Controls */}
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Campaign Select */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[1.1rem] uppercase tracking-widest font-black text-black/40">Campaign:</span>
+                  <select
+                    value={leadFilterCampaign}
+                    onChange={(e) => setLeadFilterCampaign(e.target.value)}
+                    className="bg-sb-cream border border-black/5 px-4 py-2 rounded-[8px] text-[1.2rem] font-bold text-sb-green focus:outline-none cursor-pointer"
+                  >
+                    <option value="All Campaigns">All Campaigns</option>
+                    <option value="Q3 SaaS Outreach">Q3 SaaS Outreach</option>
+                    <option value="Fintech Founders Focus">Fintech Founders Focus</option>
+                    <option value="Growth Hack Webinar">Growth Hack Webinar</option>
+                  </select>
+                </div>
+
+                {/* Days Filter */}
+                <div className="flex bg-sb-cream p-1 rounded-full overflow-hidden shrink-0">
+                  {[7, 14, 30].map((days) => (
+                    <button
+                      key={days}
+                      onClick={() => setLeadFilterDays(days)}
+                      className={cn(
+                        "px-4 py-2 rounded-full text-[1.1rem] font-bold uppercase tracking-widest transition-all cursor-pointer",
+                        leadFilterDays === days ? "bg-sb-house text-white" : "text-black/50 hover:text-black"
+                      )}
+                    >
+                      {days} Days
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Main Visualizer Content Area */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+              {/* Chart (3/4 width on desktop) */}
+              <div className="lg:col-span-3">
+                <div className="h-[320px] w-full min-h-[320px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={currentGrowthData}>
+                      <defs>
+                        <linearGradient id="growthGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#00754A" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#00754A" stopOpacity={0.01} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eae6e1" />
+                      <XAxis
+                        dataKey="date"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 11, fontWeight: 700, fill: '#000000', opacity: 0.5 }}
+                        dy={8}
+                      />
+                      {/* Left Axis: Leads Added */}
+                      <YAxis
+                        yAxisId="leads"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fontWeight: 600, fill: '#006241' }}
+                        opacity={0.8}
+                      />
+                      {/* Right Axis: Conversion Rate */}
+                      <YAxis
+                        yAxisId="rate"
+                        orientation="right"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fontWeight: 600, fill: '#cba258' }}
+                        opacity={0.8}
+                      />
+                      <Tooltip content={<CustomGrowthTooltip />} cursor={{ fill: '#eae6e1', opacity: 0.15 }} />
+                      <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 'bold' }} />
+                      
+                      {/* Lead Growth Plot: Bar Chart */}
+                      <Bar
+                        yAxisId="leads"
+                        name="New Leads Added"
+                        dataKey="leadsAdded"
+                        fill="url(#growthGrad)"
+                        stroke="#00754A"
+                        strokeWidth={1}
+                        radius={[4, 4, 0, 0]}
+                        barSize={24}
+                      />
+
+                      {/* Conversion Rate Plot: Smooth Line */}
+                      <Line
+                        yAxisId="rate"
+                        name="Campaign Conversion Rate"
+                        type="monotone"
+                        dataKey="conversionRate"
+                        stroke="#cba258"
+                        strokeWidth={3}
+                        dot={{ r: 4, strokeWidth: 1 }}
+                        activeDot={{ r: 7 }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Side Panel Diagnostics & Live Simulator (1/4 width on desktop) */}
+              <div className="bg-sb-cream/40 p-6 rounded-[12px] border border-black/5 flex flex-col justify-between">
+                <div className="space-y-6">
+                  <div className="pb-4 border-b border-black/5">
+                    <span className="text-[1.1rem] font-black uppercase tracking-widest text-sb-green block mb-1">
+                      Analytics Node
+                    </span>
+                    <h4 className="text-[1.4rem] font-bold text-sb-house uppercase">
+                      Telemetry Diagnostics
+                    </h4>
+                  </div>
+
+                  <div className="space-y-4 text-[1.25rem]">
+                    <div className="flex justify-between items-center">
+                      <span className="opacity-60">Total Leads (Visible):</span>
+                      <strong className="text-sb-green font-bold text-[1.4rem]">
+                        {currentGrowthData.reduce((acc, curr) => acc + curr.leadsAdded, 0)}
+                      </strong>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="opacity-60">Avg. Conversion Rate:</span>
+                      <strong className="text-sb-gold font-bold text-[1.4rem]">
+                        {(currentGrowthData.reduce((acc, curr) => acc + curr.conversionRate, 0) / currentGrowthData.length).toFixed(1)}%
+                      </strong>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="opacity-60">Engine Sensitivity:</span>
+                      <strong className="text-sb-accent font-bold uppercase tracking-wider text-[1.1rem]">
+                        Calibrated (UTC)
+                      </strong>
+                    </div>
+                  </div>
+
+                  {simulationAlert && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 bg-sb-light/40 border border-sb-accent/30 rounded-[8px] text-sb-house text-[1.15rem] leading-normal font-semibold font-serif italic"
+                    >
+                      {simulationAlert}
+                    </motion.div>
+                  )}
+                </div>
+
+                <div className="pt-6 border-t border-black/5">
+                  <button
+                    onClick={handleSimulateLeadIntake}
+                    className="w-full py-4 bg-sb-house hover:bg-sb-green text-sb-gold hover:text-white rounded-full text-[1.2rem] font-black uppercase tracking-widest transition-all sb-button-active shadow-sm flex items-center justify-center gap-3 cursor-pointer font-sans"
+                  >
+                    <Zap size={14} className="fill-current" />
+                    Simulate Lead Intake
+                  </button>
+                  <p className="text-[1rem] text-black/35 text-center mt-3 uppercase tracking-wider font-extrabold">
+                    Triggers simulated dynamic state updates
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>

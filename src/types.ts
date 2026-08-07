@@ -8,11 +8,6 @@ export interface UserProfile {
   plan: 'starter' | 'pro' | 'agency';
   subscriptionStatus: string;
   paypalSubscriptionId?: string;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
-  stripePriceId?: string;
-  subscriptionRenewsAt?: string;
-  subscriptionCancelledAt?: string;
   onboardingComplete: boolean;
   createdAt: string;
   apiKeys?: {
@@ -112,3 +107,29 @@ export interface TeamMember {
   status: 'Active' | 'Pending';
   createdAt: any;
 }
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'lead' | 'billing' | 'system';
+  isRead: boolean;
+  createdAt: string;
+  meta?: {
+    leadId?: string;
+    leadName?: string;
+    score?: number;
+    plan?: string;
+    amount?: string;
+  };
+}
+
+export interface Toast {
+  id: string;
+  title: string;
+  message: string;
+  type: 'success' | 'info' | 'warning' | 'error';
+  duration?: number;
+}
+

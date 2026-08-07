@@ -50,7 +50,7 @@ const AVAILABLE_PLATFORMS = [
 ];
 
 export default function Calendar() {
-  const { profile, accessToken, connectGoogleCalendar, setAccessToken } = useAuth();
+  const { profile, accessToken, signIn, setAccessToken } = useAuth();
   
   // Real Database States
   const [posts, setPosts] = useState<Post[]>([]);
@@ -194,7 +194,7 @@ export default function Calendar() {
   const handleConnectGcal = async () => {
     setGcalError(null);
     try {
-      const res = await connectGoogleCalendar();
+      const res = await signIn();
       if (!res.success && res.error) {
         setGcalError(res.error);
       }
