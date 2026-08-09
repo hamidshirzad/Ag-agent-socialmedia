@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { useAuth } from "../contexts/AuthContext";
-import { Shield, Save, Zap, Trash2, Link2, Unlink, ChevronDown, ChevronUp, ExternalLink, Bot, MessageSquare } from "lucide-react";
+import { Shield, Save, Zap, Trash2, Link2, Unlink, ChevronDown, ChevronUp, ExternalLink, Bot, MessageSquare, BookOpen, Workflow } from "lucide-react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { cn } from "../lib/utils";
@@ -89,6 +89,7 @@ export default function Settings() {
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
   const [savingPlatform, setSavingPlatform] = useState<string | null>(null);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [showGraphOverview, setShowGraphOverview] = useState(false);
 
   const isConnected = (platformId: string) =>
     !!profile?.socialAccounts?.[platformId as keyof typeof profile.socialAccounts]?.connected;
@@ -175,6 +176,50 @@ export default function Settings() {
         </header>
 
         <div className="space-y-20">
+          <section className="bg-white rounded-[12px] sb-shadow-card p-8 lg:p-12 border border-sb-house/10">
+            <button
+              onClick={() => setShowGraphOverview((prev) => !prev)}
+              className="w-full flex items-center justify-between text-left"
+              aria-label="Toggle Graph API overview"
+            >
+              <div>
+                <h2 className="text-[1.8rem] font-bold text-sb-house flex items-center gap-3 uppercase tracking-wider">
+                  <BookOpen className="text-sb-green" size={20} /> Graph API Overview
+                </h2>
+                <p className="text-[1.3rem] text-black/50 mt-2">Nodes, edges, fields, tokens, and versioning quick reference for Meta integrations.</p>
+              </div>
+              {showGraphOverview ? <ChevronUp className="text-sb-green" /> : <ChevronDown className="text-sb-green" />}
+            </button>
+
+            {showGraphOverview && (
+              <div className="mt-8 grid gap-6 text-[1.3rem]">
+                <div className="grid md:grid-cols-3 gap-4">
+                  {[
+                    { title: "Nodes", text: "Objects with IDs (User, Page, Photo, Post). Query with /{id}." },
+                    { title: "Edges", text: "Connections between nodes, e.g. /{user-id}/photos." },
+                    { title: "Fields", text: "Properties returned by default or selected with fields=id,name,email." },
+                  ].map((item) => (
+                    <div key={item.title} className="bg-sb-cream rounded-xl p-4 border border-sb-green/10">
+                      <p className="font-black uppercase tracking-wider text-sb-green">{item.title}</p>
+                      <p className="text-black/70 mt-2">{item.text}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-sb-house text-white rounded-xl p-5">
+                  <p className="font-black uppercase tracking-widest mb-2 flex items-center gap-2"><Workflow size={16} /> Request pattern</p>
+                  <code className="block text-[1.15rem] text-sb-light break-all">https://graph.facebook.com/v25.0/me?fields=id,name,picture&access_token=ACCESS_TOKEN</code>
+                </div>
+
+                <ul className="space-y-2 text-black/70 list-disc pl-6">
+                  <li>All calls are HTTPS over HTTP/1.1 and target <span className="font-semibold">graph.facebook.com</span>.</li>
+                  <li><span className="font-semibold">/me</span> resolves to the current user/page represented by the provided token.</li>
+                  <li>Always pin a version (for example <span className="font-semibold">v25.0</span>) to avoid default-version drift.</li>
+                  <li>The <span className="font-semibold">metadata=1</span> parameter is deprecated in v25.0 and will be removed across versions on <span className="font-semibold">May 19, 2026</span>.</li>
+                </ul>
+              </div>
+            )}
+          </section>
 
           {/* AI Engine Keys */}
           <section className="bg-sb-house text-white rounded-[12px] p-12 lg:p-16 sb-shadow-frap border-b-4 border-sb-gold">

@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
-import { ArrowRight, CheckCircle2, Zap, BarChart3, Users, Send } from "lucide-react";
+import { CheckCircle2, Zap, BarChart3, BrainCircuit, Send, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 
@@ -75,14 +75,65 @@ export default function Landing() {
             </button>
           </motion.div>
         </div>
-        <div className="bg-[#d4e9e2] flex items-center justify-center p-12 order-1 lg:order-2">
-           <motion.div 
-             initial={{ opacity: 0, x: 20 }}
-             animate={{ opacity: 1, x: 0 }}
-             className="relative w-full max-w-lg aspect-square bg-sb-green/10 rounded-full flex items-center justify-center"
-           >
-              <Zap className="w-48 h-48 text-sb-green animate-pulse" />
-           </motion.div>
+        <div className="bg-[#d4e9e2] flex items-center justify-center p-12 order-1 lg:order-2 overflow-hidden relative">
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="relative w-full max-w-xl rounded-[2rem] bg-white/60 backdrop-blur-sm border border-white/70 p-8 sb-shadow-card"
+          >
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              animate={{ backgroundPosition: ["0% 0%", "100% 100%"] }}
+              transition={{ duration: 10, repeat: Infinity, repeatType: "reverse" }}
+              style={{
+                backgroundImage: "radial-gradient(circle at 20% 20%, rgba(0,98,65,0.16), transparent 40%), radial-gradient(circle at 80% 80%, rgba(0,117,74,0.2), transparent 38%)",
+                backgroundSize: "160% 160%",
+              }}
+            />
+
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[1.2rem] uppercase tracking-widest text-sb-green font-bold">Background mode</p>
+                  <h3 className="text-[2.2rem] text-sb-house font-bold">Agents moving while you close deals</h3>
+                </div>
+                <Sparkles className="text-sb-accent w-8 h-8" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {[BrainCircuit, Send, BarChart3, Zap].map((Icon, i) => (
+                  <motion.div
+                    key={i}
+                    className="rounded-xl bg-white p-4 border border-sb-green/15"
+                    animate={{ y: [0, -4, 0] }}
+                    transition={{ duration: 2 + i * 0.4, repeat: Infinity }}
+                  >
+                    <Icon className="w-7 h-7 text-sb-green mb-2" />
+                    <p className="text-[1.3rem] font-semibold text-sb-house">{["Content", "Outreach", "Analytics", "Scoring"][i]} Agent</p>
+                    <p className="text-[1.2rem] text-black/60">Live automation cycle active</p>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                {[
+                  "07:02 — Generated 4 LinkedIn variants",
+                  "07:04 — Qualified lead intent: buyer (+19)",
+                  "07:05 — Scheduled post to X + LinkedIn",
+                ].map((event) => (
+                  <motion.div
+                    key={event}
+                    initial={{ opacity: 0.6 }}
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="rounded-lg bg-sb-house text-white px-4 py-3 text-[1.25rem]"
+                  >
+                    {event}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
         </div>
       </header>
 
