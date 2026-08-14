@@ -64,18 +64,22 @@ const PLANS = [
   }
 ];
 
+const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+
 export default function Billing() {
   const { profile, user } = useAuth();
   const { addToast, addNotification } = useNotifications();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   const paypalOptions = {
-    clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || "test",
+    clientId: PAYPAL_CLIENT_ID || "test",
     intent: "subscription",
     vault: true,
+    currency: "USD",
   };
 
   return (
+    <PayPalScriptProvider options={paypalOptions as any}>
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
       <Sidebar />
       
@@ -156,15 +160,17 @@ export default function Billing() {
 
                 {selectedPlan === plan.id ? (
                   <div className="space-y-4">
-                    <PayPalScriptProvider options={paypalOptions as any}>
-                      <PayPalButtons 
+                    {!plan.paypalPlanId ? (
+                      <p className="text-center text-[1.2rem] text-red-500 font-medium py-4">
+                        Payment not configured. Contact support.
+                      </p>
+                    ) : (
+                      <PayPalButtons
                         style={{ layout: "vertical", shape: "pill", label: "subscribe" }}
-                        createSubscription={(data, actions) => {
-                          return actions.subscription.create({
-                            plan_id: plan.paypalPlanId || "P-MOCKED-PLAN-ID",
-                          });
+                        createSubscription={(_data, actions) => {
+                          return actions.subscription.create({ plan_id: plan.paypalPlanId! });
                         }}
-                        onApprove={async (data, actions) => {
+                        onApprove={async (data) => {
                           addToast({
                             title: "Subscription Activated",
                             message: `Successfully registered ${plan.name} Edition! Transaction ID: ${data.subscriptionID}`,
@@ -186,13 +192,17 @@ export default function Billing() {
                               });
                             }
                           } catch (e) {
-                            console.error("Failed to persist upgraded tier to database:", e);
+                            console.error("Failed to persist plan to database:", e);
                           }
                           setSelectedPlan(null);
                         }}
+                        onError={(err) => {
+                          console.error("PayPal error", err);
+                          addToast({ title: "Payment Error", message: "Something went wrong with PayPal. Please try again.", type: "error" });
+                        }}
                       />
-                    </PayPalScriptProvider>
-                    <button 
+                    )}
+                    <button
                       onClick={() => setSelectedPlan(null)}
                       className="w-full text-[1.2rem] font-bold text-black/30 hover:text-red-500 transition-colors uppercase tracking-widest"
                     >
@@ -233,5 +243,6 @@ export default function Billing() {
         <ZapIcon className="fill-white w-6 h-6" />
       </button>
     </div>
+    </PayPalScriptProvider>
   );
 }
