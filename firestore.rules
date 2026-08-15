@@ -101,10 +101,10 @@ service cloud.firestore {
       
       allow create: if isOwner(incoming().userId) && isValidLead(incoming()) && incoming().keys().size() == 7;
       
-      allow update: if isOwner(existing().userId) && isOwner(incoming().userId) 
+      allow update: if isOwner(existing().userId) && isOwner(incoming().userId)
                     && isValidLead(incoming())
                     && incoming().createdAt == existing().createdAt
-                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'status', 'score']);
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'email', 'status', 'score', 'intent', 'draftReplies', 'autoSendThreshold', 'reviewRequiredThreshold']);
 
       function isValidLead(data) {
         return data.userId is string && data.userId.size() <= 128
@@ -117,10 +117,15 @@ service cloud.firestore {
       // Sub-collection: Messages
       match /messages/{messageId} {
         allow read: if isSignedIn() && isValidId(messageId) && isOwner(get(/databases/$(database)/documents/leads/$(leadId)).data.userId);
-        allow create: if isSignedIn() && isValidId(messageId) 
+        allow create: if isSignedIn() && isValidId(messageId)
                       && isOwner(get(/databases/$(database)/documents/leads/$(leadId)).data.userId)
                       && isValidMessage(incoming());
-        
+        allow update: if isSignedIn() && isValidId(messageId)
+                      && isOwner(get(/databases/$(database)/documents/leads/$(leadId)).data.userId)
+                      && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'status']);
+        allow delete: if isSignedIn() && isValidId(messageId)
+                      && isOwner(get(/databases/$(database)/documents/leads/$(leadId)).data.userId);
+
         function isValidMessage(data) {
           return data.content is string && data.content.size() <= 5000
               && data.sender in ['ai', 'user'];

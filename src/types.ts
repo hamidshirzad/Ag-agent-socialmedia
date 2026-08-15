@@ -39,6 +39,11 @@ export interface Lead {
   score: number;
   status: 'new' | 'qualified' | 'booked' | 'closed';
   createdAt: string;
+  // AI follow-up automation
+  intent?: 'casual' | 'interested' | 'buyer';
+  draftReplies?: boolean;
+  autoSendThreshold?: number;    // 0–100; auto-sends when AI confidence ≥ this
+  reviewRequiredThreshold?: number; // 0–100; always flags for review when AI confidence < this
 }
 
 export interface Message {
@@ -48,6 +53,9 @@ export interface Message {
   content: string;
   intent?: string;
   timestamp: string;
+  // AI draft state
+  status?: 'draft' | 'approved' | 'sent';
+  confidence?: number; // 0–100, from analyzeLeadIntent leadScore
 }
 
 export interface Campaign {

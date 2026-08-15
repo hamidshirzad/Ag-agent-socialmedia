@@ -92,7 +92,7 @@ export default function Campaigns() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [activeCampaignForVariation, setActiveCampaignForVariation] = useState<string | null>(null);
-  const [missionCampaign, setMissionCampaign] = useState<Campaign | null>(null);
+  const [missionCampaignId, setMissionCampaignId] = useState<string | null>(null);
   const [missionForm, setMissionForm] = useState<Partial<Campaign>>({});
   const [savingMission, setSavingMission] = useState(false);
   const [jobsTab, setJobsTab] = useState<JobTab>('pending');
@@ -190,7 +190,7 @@ export default function Campaigns() {
   };
 
   const openMission = (campaign: Campaign) => {
-    setMissionCampaign(campaign);
+    setMissionCampaignId(campaign.id);
     setMissionForm({
       objective:      campaign.objective      ?? "",
       targetAudience: campaign.targetAudience ?? "",
@@ -253,7 +253,11 @@ export default function Campaigns() {
     }
   };
 
-  const campaignJobs = missionCampaign ? jobs.filter(j => j.campaignId === missionCampaign.id) : [];
+  // Always derive from live `campaigns` so the drawer never reads a stale snapshot
+  const missionCampaign = missionCampaignId
+    ? campaigns.find(c => c.id === missionCampaignId) ?? null
+    : null;
+  const campaignJobs = missionCampaignId ? jobs.filter(j => j.campaignId === missionCampaignId) : [];
 
   return (
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
@@ -655,7 +659,7 @@ export default function Campaigns() {
             <>
               <div
                 className="fixed inset-0 z-[90] bg-sb-house/60 backdrop-blur-sm"
-                onClick={() => setMissionCampaign(null)}
+                onClick={() => setMissionCampaignId(null)}
               />
               <motion.div
                 initial={{ x: "100%" }}
@@ -666,7 +670,7 @@ export default function Campaigns() {
               >
                 <div className="p-12 pt-16">
                   <button
-                    onClick={() => setMissionCampaign(null)}
+                    onClick={() => setMissionCampaignId(null)}
                     className="absolute top-8 right-8 text-black/20 hover:text-black transition-colors"
                   >
                     <XCircle size={24} />
