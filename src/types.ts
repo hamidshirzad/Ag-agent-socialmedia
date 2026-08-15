@@ -66,6 +66,26 @@ export interface Campaign {
       engagement: number;
     };
   }[];
+  // Automation mission fields
+  objective?: string;
+  targetAudience?: string;
+  budgetRange?: string;
+  channels?: string[];
+  cadence?: 'daily' | 'weekly' | 'biweekly';
+  status?: 'draft' | 'active' | 'paused';
+  lastRunAt?: any;
+  nextRunAt?: any;
+}
+
+export interface AutomationJob {
+  id: string;
+  userId: string;
+  campaignId: string;
+  type: 'content_creation' | 'lead_follow_up' | 'performance_review';
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  scheduledFor: any;
+  createdAt: any;
+  resultSummary?: string;
 }
 
 export interface ScoringRule {

@@ -135,10 +135,27 @@ service cloud.firestore {
       
       allow create: if isOwner(incoming().userId) && isValidCampaign(incoming());
       allow update: if isOwner(existing().userId) && isOwner(incoming().userId) && isValidCampaign(incoming());
+      allow delete: if isOwner(existing().userId);
 
       function isValidCampaign(data) {
         return data.userId is string && data.userId.size() <= 128
             && data.name is string && data.name.size() <= 100;
+      }
+    }
+
+    // --- Automation Jobs ---
+    match /automationJobs/{jobId} {
+      allow get:    if isSignedIn() && isValidId(jobId) && isOwner(existing().userId);
+      allow list:   if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isOwner(incoming().userId) && isValidAutomationJob(incoming());
+      allow update: if isOwner(existing().userId) && isOwner(incoming().userId);
+      allow delete: if isOwner(existing().userId);
+
+      function isValidAutomationJob(data) {
+        return data.userId is string && data.userId.size() <= 128
+            && data.campaignId is string && data.campaignId.size() <= 128
+            && data.type in ['content_creation', 'lead_follow_up', 'performance_review']
+            && data.status in ['pending', 'running', 'completed', 'failed'];
       }
     }
   }
