@@ -4,6 +4,7 @@
  */
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import Landing from "./pages/Landing";
@@ -42,6 +43,7 @@ export default function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
+          <Analytics />
         </BrowserRouter>
       </NotificationProvider>
     </AuthProvider>
