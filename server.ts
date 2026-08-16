@@ -7,8 +7,15 @@ import axios from "axios";
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
+import Stripe from "stripe";
 
 dotenv.config();
+
+function getStripeClient() {
+  const apiKey = process.env.STRIPE_SECRET_KEY;
+  if (!apiKey) return null;
+  return new Stripe(apiKey);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -205,6 +212,154 @@ export function createApp() {
     } catch (error: any) {
       console.error(`OAuth callback error for ${platform}:`, error.response?.data || error.message);
       res.status(500).send(`Authentication failed: ${error.message}`);
+    }
+  });
+
+  // Stripe Checkout Session creation
+  app.post("/api/billing/create-checkout-session", async (req, res) => {
+    try {
+      const { planId, userId, userEmail, successUrl, cancelUrl } = req.body;
+
+      if (!planId) {
+        return res.status(400).json({ error: "planId is required" });
+      }
+
+      const planDetails: Record<string, { name: string; amount: number; description: string }> = {
+        starter: {
+          name: "Starter Edition",
+          amount: 2900, // $29.00
+          description: "Perfect for solo operators and small brands."
+        },
+        pro: {
+          name: "Pro Edition",
+          amount: 9900, // $99.00
+          description: "Advanced neural engine for growth hackers."
+        },
+        agency: {
+          name: "Agency Edition",
+          amount: 29900, // $299.00
+          description: "Multi-tenant solution for high-volume firms."
+        }
+      };
+
+      const selectedPlan = planDetails[planId] || planDetails.pro;
+      const stripe = getStripeClient();
+
+      if (stripe) {
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          mode: "subscription",
+          line_items: [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: {
+                  name: selectedPlan.name,
+                  description: selectedPlan.description,
+                },
+                unit_amount: selectedPlan.amount,
+                recurring: {
+                  interval: "month",
+                },
+              },
+              quantity: 1,
+            },
+          ],
+          customer_email: userEmail || undefined,
+          client_reference_id: userId || undefined,
+          metadata: {
+            userId: userId || "",
+            planId: planId,
+          },
+          success_url: successUrl || `${req.protocol}://${req.get("host")}/billing?success=true&plan=${planId}&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: cancelUrl || `${req.protocol}://${req.get("host")}/billing?canceled=true`,
+        });
+
+        return res.json({ url: session.url, sessionId: session.id });
+      } else {
+        // Fallback for sandbox/demo mode when STRIPE_SECRET_KEY is not configured in env
+        const appUrl = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+        const mockSessionId = `cs_test_${Math.random().toString(36).substring(2, 12)}`;
+        const mockRedirectUrl = `${appUrl}/billing?success=true&plan=${planId}&session_id=${mockSessionId}&demo=true`;
+        
+        return res.json({ 
+          url: mockRedirectUrl, 
+          sessionId: mockSessionId,
+          isDemoMode: true 
+        });
+      }
+    } catch (error: any) {
+      console.error("Error creating Stripe checkout session:", error);
+      res.status(500).json({ error: error.message || "Failed to create checkout session" });
+    }
+  });
+
+  // Stripe Webhook
+  app.post("/api/billing/stripe-webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const stripe = getStripeClient();
+
+    let event: any;
+
+    try {
+      if (stripe && webhookSecret && sig) {
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      } else {
+        event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      }
+
+      console.log(`[Stripe Webhook] Received event: ${event.type}`);
+
+      if (event.id) {
+        await targetDb.collection("billing_events").add({
+          id: event.id,
+          type: event.type,
+          receivedAt: new Date(),
+          data: event.data?.object || null
+        });
+      }
+
+      switch (event.type) {
+        case "checkout.session.completed": {
+          const session = event.data.object;
+          const userId = session.metadata?.userId || session.client_reference_id;
+          const planId = session.metadata?.planId;
+
+          if (userId && planId) {
+            const userRef = targetDb.collection("users").doc(userId);
+            await userRef.update({
+              plan: planId,
+              subscriptionStatus: "active",
+              stripeCustomerId: session.customer || null,
+              stripeSubscriptionId: session.subscription || null,
+              updatedAt: new Date()
+            });
+          }
+          break;
+        }
+
+        case "customer.subscription.deleted": {
+          const subscription = event.data.object;
+          const userQuery = await targetDb.collection("users").where("stripeSubscriptionId", "==", subscription.id).get();
+          if (!userQuery.empty) {
+            await userQuery.docs[0].ref.update({
+              subscriptionStatus: "canceled",
+              plan: "free",
+              updatedAt: new Date()
+            });
+          }
+          break;
+        }
+
+        default:
+          console.log(`Unhandled Stripe event type: ${event.type}`);
+      }
+
+      res.status(200).json({ received: true });
+    } catch (err: any) {
+      console.error(`Stripe webhook error: ${err.message}`);
+      res.status(400).send(`Webhook Error: ${err.message}`);
     }
   });
 
