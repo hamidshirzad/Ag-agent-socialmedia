@@ -50,7 +50,8 @@ rotation, and previously served assets could retain it.
 | --- | --- |
 | `vite.config.ts` | Removed the `define` entry and the unrestricted `loadEnv` call entirely. |
 | `src/services/aiService.ts` | `callGemini` no longer falls back to a server environment value; the key must be supplied explicitly. |
-| `scripts/check-client-secrets.mjs` | New build-output guard (below). |
+| `src/services/aiService.test.ts` | Cover the missing-key error and its exact wording. |
+| `scripts/check-client-secrets.mjs` | New two-layer guard (below). |
 | `package.json` | Added the `test:client-secrets` script. |
 
 Browser behaviour is unchanged apart from the removed fallback. Client callers
@@ -64,20 +65,41 @@ Settings.` — which reveals nothing about server configuration.
 npm run test:client-secrets
 ```
 
-This cleans `dist/`, rebuilds the client with a **fake** sentinel value in
-`GEMINI_API_KEY`, and scans every emitted artifact — source maps and binary
-files included — failing if either the sentinel or a direct server-environment
-reference appears.
+The guard has **two layers**, because neither alone is sufficient.
 
-Two deliberate design choices:
+**Layer 1 — source.** Static checks on the build configuration and client
+sources. Fails if `vite.config.ts` contains a `define` entry or calls `loadEnv`
+with an empty prefix, or if any file under `src/` reads a known server
+credential from the environment.
+
+**Layer 2 — output.** Cleans `dist/`, rebuilds the client with a **fake**
+sentinel value in `GEMINI_API_KEY`, and byte-scans every emitted artifact —
+source maps and binary files included — failing if the sentinel appears.
+
+Both layers are required. An output-only scan has two blind spots, each
+demonstrated against this repository before layer 1 was added:
+
+1. **A `define` re-added alone is invisible.** With no client file reading the
+   value, nothing enters the bundle and the scan passes. The trap is re-armed
+   silently and springs when someone later adds a reference.
+2. **A client environment read cannot be found in a production bundle.**
+   esbuild minifies `process.env` to a short alias, so the built output reads
+   `FGe.GEMINI_API_KEY`. Grepping minified output for the qualified form finds
+   nothing.
+
+Two further design choices:
 
 - **A sentinel, not a key-shaped pattern.** Scanning for real key prefixes only
   proves today's keys are absent, and would require whitelisting the public
   Firebase key, which rotates. The sentinel proves the *mechanism* is closed.
-- **The fully-qualified environment reference only.** The bundled
-  `@google/genai` SDK contains its own server-side lookup of the bare name
-  `GEMINI_API_KEY`. Matching the bare name would fail forever on third-party
-  code. **Do not widen the check.**
+- **The bare name `GEMINI_API_KEY` is never matched in build output.** The
+  bundled `@google/genai` SDK contains its own server-side lookup of that name,
+  so a widened check would fail forever on third-party code and train everyone
+  to disable it. **Do not widen it.**
+
+Layer 1 reports non-credential `process.env` reads in client code as
+**warnings**, not failures — currently `src/services/videoService.ts`, which is
+inert but is the same family of problem.
 
 Never place a real credential in this script, in tests, or in fixtures.
 
