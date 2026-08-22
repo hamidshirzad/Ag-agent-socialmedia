@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:client-secrets": "node scripts/check-client-secrets.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
