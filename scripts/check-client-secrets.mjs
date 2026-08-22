@@ -4,29 +4,24 @@
  *
  * Two layers, because neither alone is sufficient:
  *
- *   1. SOURCE  — static checks on the build config and client sources.
- *   2. OUTPUT  — build with a fake server credential and scan every artifact.
+ *   1. SOURCE  — no forbidden credential name may appear in client source.
+ *   2. OUTPUT  — build with a fake canary in every guarded variable, then byte
+ *                scan every emitted artifact for those canaries.
  *
- * Why both. The output scan alone has two blind spots, each demonstrated
- * against this repository:
+ * Why both. An output-only scan has two blind spots, each demonstrated against
+ * this repository by two independent reviews:
  *
- *   a) A `define` entry re-added to vite.config.ts is invisible to an output
- *      scan until some client file also reads the value. The trap can be
- *      re-armed silently and spring later.
+ *   a) A `define` re-added to vite.config.ts is invisible to an output scan
+ *      until some client file also reads the value. The trap can be re-armed
+ *      silently and spring later.
  *
  *   b) A direct client read of a server variable does NOT appear in a
- *      production bundle as `process.env.NAME`. esbuild minifies `process.env`
- *      to a short alias, so the built output reads `FGe.GEMINI_API_KEY`.
- *      Grepping minified output for the qualified form finds nothing.
+ *      production bundle as a recognisable expression. esbuild minifies
+ *      `process.env` to a short alias, so built output reads `FGe.GEMINI_API_KEY`.
  *
- * The source layer catches the cause; the output layer catches anything that
- * reaches the browser by a route nobody anticipated.
- *
- * Why a sentinel rather than a key-shaped pattern: scanning for real key shapes
- * (for example the "AIza" prefix) only proves today's keys are absent, and
- * forces a whitelist for the Firebase browser key, which is public by design
- * and rotates. A sentinel proves the mechanism is closed: if the build can
- * carry this value to the browser, it can carry a real one.
+ * And a source-only scan misses anything reaching the browser by a route
+ * nobody anticipated. The rules themselves live in
+ * lib/forbidden-client-access.mjs and are unit-tested there.
  *
  * Usage: npm run test:client-secrets
  */
@@ -35,24 +30,16 @@ import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
+import {
+  scanArtifactBytes,
+  scanSource,
+  sentinelEnv,
+} from "./lib/forbidden-client-access.mjs";
+
 const ROOT = resolve(import.meta.dirname, "..");
 const DIST = join(ROOT, "dist");
 const SRC = join(ROOT, "src");
 const VITE_CONFIG = join(ROOT, "vite.config.ts");
-
-// Fake. Never a real credential.
-const SENTINEL = "GEMINI_CANARY_DO_NOT_SHIP_7f91";
-
-// Server-owned names that must never be read by client code.
-const SERVER_CREDENTIALS = [
-  "GEMINI_API_KEY",
-  "ANTHROPIC_API_KEY",
-  "OPENAI_API_KEY",
-  "STRIPE_SECRET_KEY",
-  "STRIPE_WEBHOOK_SECRET",
-  "FIREBASE_SERVICE_ACCOUNT",
-  "DATABASE_URL",
-];
 
 const problems = [];
 const warnings = [];
@@ -70,11 +57,12 @@ function walk(dir) {
 const rel = (f) => relative(ROOT, f).split("\\").join("/");
 
 // ---------------------------------------------------------------- layer 1
-console.log("→ layer 1: checking build config and client sources");
+console.log("→ layer 1: build config and client sources");
 
 const viteConfig = readFileSync(VITE_CONFIG, "utf8");
 
-// Strip comments so documentation about the anti-pattern is not mistaken for it.
+// Strip comments so this file's own documentation of the anti-pattern is not
+// mistaken for the anti-pattern.
 const viteCode = viteConfig
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .replace(/^\s*\/\/.*$/gm, "");
@@ -90,8 +78,7 @@ if (/\bdefine\s*:/.test(viteCode)) {
 const loadEnvCall = viteCode.match(/loadEnv\s*\(([^)]*)\)/);
 if (loadEnvCall) {
   const prefix = loadEnvCall[1].split(",")[2]?.trim() ?? "";
-  const unrestricted = prefix === "" || prefix === "''" || prefix === '""';
-  if (unrestricted) {
+  if (prefix === "" || prefix === "''" || prefix === '""') {
     problems.push(
       `${rel(VITE_CONFIG)}: calls loadEnv with an empty prefix, which reads ` +
         `every environment variable including server-only secrets. Use 'VITE_'.`,
@@ -100,26 +87,14 @@ if (loadEnvCall) {
 }
 
 for (const file of walk(SRC)) {
-  if (!/\.(ts|tsx|js|jsx)$/.test(file)) continue;
-  const text = readFileSync(file, "utf8");
-  for (const match of text.matchAll(/process\s*\.\s*env\s*(?:as\s+\w+\s*\))?\s*\.?\s*(\w+)?/g)) {
-    const name = match[1];
-    if (name && SERVER_CREDENTIALS.includes(name)) {
-      problems.push(
-        `${rel(file)}: client code reads the server credential ${name} from ` +
-          `the environment. Server credentials must be read in server.ts only.`,
-      );
-    } else {
-      warnings.push(
-        `${rel(file)}: reads process.env${name ? `.${name}` : ""} in client ` +
-          `code. Not a server credential, but the browser has no process.env.`,
-      );
-    }
-  }
+  if (!/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file)) continue;
+  const result = scanSource(rel(file), readFileSync(file, "utf8"));
+  problems.push(...result.problems);
+  warnings.push(...result.warnings);
 }
 
 // ---------------------------------------------------------------- layer 2
-console.log("→ layer 2: cleaning dist/ and building with a fake credential");
+console.log("→ layer 2: cleaning dist/ and building with fake canaries");
 
 rmSync(DIST, { recursive: true, force: true });
 
@@ -127,7 +102,9 @@ const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const build = spawnSync(npm, ["run", "build"], {
   cwd: ROOT,
   stdio: "inherit",
-  env: { ...process.env, GEMINI_API_KEY: SENTINEL },
+  // Every guarded variable is armed, so a client read of ANY of them — the
+  // server credential or its VITE_ alias — plants a unique canary we can find.
+  env: { ...process.env, ...sentinelEnv() },
 });
 
 if (build.error) {
@@ -145,16 +122,8 @@ if (build.error) {
     problems.push("dist/ is empty, so the output scan would pass vacuously.");
   } else {
     console.log(`→ scanning ${files.length} emitted artifact(s)`);
-    const needle = Buffer.from(SENTINEL, "utf8");
     for (const file of files) {
-      // Read as bytes so source maps and binary artifacts (images, fonts) are
-      // searched exactly like text, with no encoding assumptions.
-      if (readFileSync(file).includes(needle)) {
-        problems.push(
-          `${rel(file)}: contains the server credential sentinel. A real key ` +
-            `set in the build environment would ship to every visitor.`,
-        );
-      }
+      problems.push(...scanArtifactBytes(rel(file), readFileSync(file)));
     }
   }
 }
@@ -166,7 +135,7 @@ if (warnings.length > 0) {
 }
 
 if (problems.length > 0) {
-  console.error(`\n✗ client-secret check FAILED\n`);
+  console.error("\n✗ client-secret check FAILED\n");
   for (const p of problems) console.error(`    ${p}`);
   console.error("\nSee SECURITY.md.\n");
   process.exit(1);

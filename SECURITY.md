@@ -52,6 +52,7 @@ rotation, and previously served assets could retain it.
 | `src/services/aiService.ts` | `callGemini` no longer falls back to a server environment value; the key must be supplied explicitly. |
 | `src/services/aiService.test.ts` | Cover the missing-key error and its exact wording. |
 | `scripts/check-client-secrets.mjs` | New two-layer guard (below). |
+| `scripts/lib/forbidden-client-access.mjs` | The guard's rules, unit-tested separately. |
 | `package.json` | Added the `test:client-secrets` script. |
 
 Browser behaviour is unchanged apart from the removed fallback. Client callers
@@ -67,41 +68,67 @@ npm run test:client-secrets
 
 The guard has **two layers**, because neither alone is sufficient.
 
-**Layer 1 — source.** Static checks on the build configuration and client
-sources. Fails if `vite.config.ts` contains a `define` entry or calls `loadEnv`
-with an empty prefix, or if any file under `src/` reads a known server
-credential from the environment.
+**Layer 1 — source.** No forbidden credential name may appear anywhere in
+client source under `src/`. Also fails if `vite.config.ts` contains a `define`
+entry or calls `loadEnv` with an empty prefix.
 
-**Layer 2 — output.** Cleans `dist/`, rebuilds the client with a **fake**
-sentinel value in `GEMINI_API_KEY`, and byte-scans every emitted artifact —
-source maps and binary files included — failing if the sentinel appears.
+The rule matches **names, not access syntax**. An earlier version matched
+expressions such as `process.env.NAME`, and two independent reviews bypassed it
+within minutes — JavaScript offers unlimited spellings of the same read:
 
-Both layers are required. An output-only scan has two blind spots, each
-demonstrated against this repository before layer 1 was added:
+```js
+process.env.GEMINI_API_KEY          process?.env?.GEMINI_API_KEY
+process.env["GEMINI_API_KEY"]       const { GEMINI_API_KEY } = process.env
+import.meta.env.GEMINI_API_KEY      const e = process.env; e.GEMINI_API_KEY
+(import.meta as any).env.NAME       ...and any future syntax
+```
+
+Chasing those is an arms race the scanner loses. Every one of them must spell
+the credential's name somewhere, so the rule is simply that the name may not
+appear. This is deliberately conservative: a name inside a comment is rejected
+too. A reworded comment is cheaper than a published credential.
+
+**Layer 2 — output.** Cleans `dist/`, rebuilds with a unique fake canary in
+every guarded variable — each server credential *and* each forbidden `VITE_`
+alias — then byte-scans every emitted artifact, source maps and binary files
+included. Because the aliases are armed too, a future
+`import.meta.env.VITE_GEMINI_API_KEY` plants its own distinct canary in the
+bundle and fails even if the source layer were somehow satisfied.
+
+Both layers are required. Layer 2 alone has two blind spots, each demonstrated
+against this repository:
 
 1. **A `define` re-added alone is invisible.** With no client file reading the
    value, nothing enters the bundle and the scan passes. The trap is re-armed
    silently and springs when someone later adds a reference.
 2. **A client environment read cannot be found in a production bundle.**
-   esbuild minifies `process.env` to a short alias, so the built output reads
-   `FGe.GEMINI_API_KEY`. Grepping minified output for the qualified form finds
-   nothing.
+   esbuild minifies `process.env` to a short alias, so built output reads
+   `FGe.GEMINI_API_KEY`.
 
-Two further design choices:
+Layer 1 alone misses anything reaching the browser by an unanticipated route.
 
-- **A sentinel, not a key-shaped pattern.** Scanning for real key prefixes only
-  proves today's keys are absent, and would require whitelisting the public
-  Firebase key, which rotates. The sentinel proves the *mechanism* is closed.
-- **The bare name `GEMINI_API_KEY` is never matched in build output.** The
-  bundled `@google/genai` SDK contains its own server-side lookup of that name,
-  so a widened check would fail forever on third-party code and train everyone
-  to disable it. **Do not widen it.**
+### What is forbidden, and what is not
 
-Layer 1 reports non-credential `process.env` reads in client code as
-**warnings**, not failures — currently `src/services/videoService.ts`, which is
-inert but is the same family of problem.
+Forbidden anywhere in `src/` — these names and their `VITE_` aliases:
 
-Never place a real credential in this script, in tests, or in fixtures.
+`GEMINI_API_KEY` · `ANTHROPIC_API_KEY` · `OPENAI_API_KEY` ·
+`STRIPE_SECRET_KEY` · `STRIPE_WEBHOOK_SECRET` · `FIREBASE_SERVICE_ACCOUNT` ·
+`DATABASE_URL`
+
+**Explicitly allowed:** public browser configuration such as
+`VITE_FIREBASE_API_KEY`. That is published by design and is a different thing
+from `FIREBASE_SERVICE_ACCOUNT`. The scanner judges the variable's identity and
+never its value — an `AIza`-shaped string is not itself a finding.
+
+Non-credential client `process.env` reads are reported as **warnings**, not
+failures — currently `src/services/videoService.ts`, which is inert but is the
+same family of problem.
+
+Canaries are never real credentials and never key-shaped. Never place a real
+credential in this script, in tests, or in fixtures.
+
+Known limit: a name assembled at runtime (`"GEMINI_" + "API_KEY"`) is invisible
+to any textual scan. Layer 2 is the backstop for that.
 
 ### Rules for contributors
 
