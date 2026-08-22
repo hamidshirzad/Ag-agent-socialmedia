@@ -23,9 +23,15 @@ export async function generateContentWithEngine(
   }
 }
 
+// The Gemini key must be supplied explicitly by the caller. Browser callers pass
+// the user's own key from Settings. Server callers must read the server-owned
+// credential from the environment at the call site in server.ts, so it stays
+// server-side and is never substituted into a client bundle.
+// (This comment deliberately avoids spelling out the env reference itself, so
+// that source maps can never carry the token the secret scanner forbids.)
 async function callGemini(prompt: string, userKey?: string) {
-  const apiKey = userKey || process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Gemini API Key missing");
+  const apiKey = userKey;
+  if (!apiKey) throw new Error("Gemini API Key missing. Please add it in Settings.");
   
   const ai = new GoogleGenAI({ apiKey });
   

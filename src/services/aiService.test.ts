@@ -68,6 +68,18 @@ describe("aiService / generateContentWithEngine", () => {
       .rejects.toThrow("OpenAI API Key missing");
   });
 
+  // Gemini used to fall back to a server-owned key injected into the bundle at
+  // build time. It must now require an explicit key like every other provider.
+  it("should throw for a missing gemini key rather than falling back", async () => {
+    await expect(generateContentWithEngine("test", { provider: "gemini" }))
+      .rejects.toThrow("Gemini API Key missing");
+  });
+
+  it("should not leak the key in the missing-key error", async () => {
+    await expect(generateContentWithEngine("test", { provider: "gemini" }))
+      .rejects.toThrow(/^Gemini API Key missing\. Please add it in Settings\.$/);
+  });
+
   it("should attempt extraction for Claude if JSON parsing fails", async () => {
     const Anthropic = (await import("@anthropic-ai/sdk")).default;
     // @ts-ignore
