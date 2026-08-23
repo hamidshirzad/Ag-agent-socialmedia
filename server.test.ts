@@ -3,7 +3,32 @@
  */
 import { describe, it, expect, vi } from "vitest";
 import request from "supertest";
-import { createApp } from "./server";
+
+// Firestore is stubbed so the suite is hermetic. Without this, importing the
+// server initializes firebase-admin and the billing webhook writes a real
+// document — on any machine that has credentials configured, `npm test` would
+// insert rows into the production database. The recorded writes are also
+// asserted below, so absent event fields cannot silently become `undefined`.
+const writes: Array<Record<string, unknown>> = [];
+
+vi.mock("firebase-admin", () => ({
+  default: { apps: [] as unknown[], initializeApp: vi.fn() },
+}));
+
+vi.mock("firebase-admin/firestore", () => ({
+  getFirestore: () => ({
+    collection: () => ({
+      add: vi.fn(async (data: Record<string, unknown>) => {
+        writes.push(data);
+        return { id: "stub_doc" };
+      }),
+      where: () => ({ get: async () => ({ empty: true, docs: [] }) }),
+      doc: () => ({ set: vi.fn(async () => undefined), update: vi.fn(async () => undefined) }),
+    }),
+  }),
+}));
+
+const { createApp } = await import("./server");
 
 describe("Express Server API", () => {
   const app = createApp();
