@@ -279,6 +279,23 @@ describe("Express Server API", () => {
       expect(res.headers["x-quota-limit"]).toBe("50");
     });
 
+    it("does not accept inherited property names as plans", async () => {
+      // `in` walks the prototype chain, so "constructor" and "__proto__" —
+      // already lowercase — passed validation and indexed to a function/object.
+      // A non-numeric allowance makes every `used >= allowance` false, silently
+      // disabling the daily quota for that user.
+      for (const hostile of ["constructor", "__proto__"]) {
+        usageDocs.clear();
+        userPlan.value = hostile;
+        usageDocs.set(`${currentUid}_${today()}`, { count: 50 });
+
+        const res = await authed("/api/generate").send({ prompt: "hi" });
+
+        expect(res.status, `plan="${hostile}" must not bypass the quota`).toBe(429);
+        expect(res.headers["x-quota-limit"]).toBe("50");
+      }
+    });
+
     it("throttles a caller hammering the route", async () => {
       for (let i = 0; i < 10; i += 1) {
         expect((await authed("/api/generate").send({ prompt: "hi" })).status).toBe(200);

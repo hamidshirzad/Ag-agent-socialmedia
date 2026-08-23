@@ -94,10 +94,23 @@ export const DEFAULT_PLAN: PlanName = "starter";
 /** Per-user ceiling on requests in any 60-second window. */
 export const BURST_PER_MINUTE = 10;
 
+/** The known plan names, as an explicit list rather than a prototype lookup. */
+const PLAN_NAMES: readonly string[] = Object.freeze(Object.keys(PLAN_DAILY_GENERATIONS));
+
+/**
+ * Normalise a stored plan value to a known plan.
+ *
+ * Membership is tested against an explicit key list, NOT with `in`. `in` walks
+ * the prototype chain, so `"constructor"` and `"__proto__"` — both already
+ * lowercase, so they survive the toLowerCase() — would pass validation and then
+ * index to a function or an object instead of a number. A non-numeric allowance
+ * makes every `used >= allowance` comparison false, which silently disables the
+ * daily quota for that user rather than falling back to the smallest plan.
+ */
 export function planFor(value: unknown): PlanName {
   if (typeof value !== "string") return DEFAULT_PLAN;
   const normalized = value.toLowerCase();
-  return normalized in PLAN_DAILY_GENERATIONS ? (normalized as PlanName) : DEFAULT_PLAN;
+  return PLAN_NAMES.includes(normalized) ? (normalized as PlanName) : DEFAULT_PLAN;
 }
 
 /** Quota day in UTC, so a counter cannot be reset by changing timezone. */
@@ -183,6 +196,11 @@ export function enforceUsageLimits(options: UsageLimitOptions) {
     try {
       plan = await getPlan(user.uid);
       allowance = PLAN_DAILY_GENERATIONS[plan];
+      // A non-numeric allowance would make every ceiling comparison false and
+      // silently disable the quota, so it is treated as a store failure.
+      if (typeof allowance !== "number" || !Number.isFinite(allowance)) {
+        throw new Error(`plan '${plan}' has no numeric allowance`);
+      }
       ({ allowed, used } = await store.consume(user.uid, utcDay(now()), allowance));
     } catch {
       // The durable counter is what keeps this endpoint's blast radius finite,

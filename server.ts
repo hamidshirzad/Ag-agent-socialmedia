@@ -11,6 +11,7 @@ import Stripe from "stripe";
 import { generateContentWithEngine, type AIConfig } from "./src/services/aiService";
 import {
   enforceUsageLimits,
+  planFor,
   firestorePlanReader,
   firestoreUsageStore,
   requireAuth,
@@ -318,7 +319,13 @@ export function createApp() {
         }
       };
 
-      const selectedPlan = planDetails[planId] || planDetails.pro;
+      // Own-property lookup only: `planDetails["constructor"]` would otherwise
+      // resolve to a function and pass the `||` fallback as truthy.
+      const selectedPlan =
+        (typeof planId === "string" &&
+        Object.prototype.hasOwnProperty.call(planDetails, planId)
+          ? planDetails[planId]
+          : undefined) ?? planDetails.pro;
       const stripe = getStripeClient();
 
       if (stripe) {
@@ -405,7 +412,11 @@ export function createApp() {
           if (userId && planId) {
             const userRef = targetDb.collection("users").doc(userId);
             await userRef.update({
-              plan: planId,
+              // Normalised, not trusted: this write uses the Admin SDK, which
+              // bypasses the `plan in ['starter','pro','agency']` check in
+              // firestore.rules. planId originates from request input carried
+              // through Stripe metadata.
+              plan: planFor(planId),
               subscriptionStatus: "active",
               stripeCustomerId: session.customer || null,
               stripeSubscriptionId: session.subscription || null,
