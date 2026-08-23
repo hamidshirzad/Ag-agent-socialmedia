@@ -53,12 +53,35 @@ export function collectSpecifiers(fileName, text) {
   return specifiers;
 }
 
-/** Resolve a specifier to a local file, or null for bare/package imports. */
-export function resolveSpecifier(root, importerPath, specifier) {
+/** The alias map assumed when a caller does not supply one parsed from the config. */
+export const DEFAULT_ALIASES = (root) => ({ "@": root });
+
+/** Longest-prefix alias match, so a more specific alias wins over a shorter one. */
+function applyAlias(specifier, aliases) {
+  let best = null;
+  for (const [key, target] of Object.entries(aliases)) {
+    if (specifier === key) {
+      if (best === null || key.length > best.key.length) best = { key, rest: "", target };
+    } else if (specifier.startsWith(`${key}/`)) {
+      if (best === null || key.length > best.key.length) {
+        best = { key, rest: specifier.slice(key.length + 1), target };
+      }
+    }
+  }
+  return best === null ? null : (best.rest === "" ? best.target : join(best.target, best.rest));
+}
+
+/**
+ * Resolve a specifier to a local file, or null for bare/package imports.
+ *
+ * `aliases` comes from vite.config.ts rather than being assumed, so repointing
+ * an alias cannot silently shrink the scanned set.
+ */
+export function resolveSpecifier(root, importerPath, specifier, aliases = DEFAULT_ALIASES(root)) {
   let base;
-  if (specifier.startsWith("@/")) {
-    // vite.config.ts aliases `@` to the repository root.
-    base = join(root, specifier.slice(2));
+  const aliased = applyAlias(specifier, aliases);
+  if (aliased !== null) {
+    base = aliased;
   } else if (specifier.startsWith("./") || specifier.startsWith("../")) {
     base = resolve(dirname(importerPath), specifier);
   } else if (specifier.startsWith("/")) {
@@ -75,13 +98,13 @@ export function resolveSpecifier(root, importerPath, specifier) {
 }
 
 /** Client entry points, read from index.html's module scripts. */
-export function findEntries(root) {
+export function findEntries(root, aliases = DEFAULT_ALIASES(root)) {
   const entries = [];
   const indexHtml = join(root, "index.html");
   if (existsSync(indexHtml)) {
     const html = readFileSync(indexHtml, "utf8");
     for (const [, src] of html.matchAll(/<script[^>]+src=["']([^"']+)["']/g)) {
-      const resolved = resolveSpecifier(root, indexHtml, src);
+      const resolved = resolveSpecifier(root, indexHtml, src, aliases);
       if (resolved) entries.push(resolved);
     }
   }
@@ -100,8 +123,8 @@ export function findEntries(root) {
  * Every local module reachable from the client entry.
  * @returns {{modules: string[], entries: string[]}} absolute paths
  */
-export function collectClientModules(root) {
-  const entries = findEntries(root);
+export function collectClientModules(root, aliases = DEFAULT_ALIASES(root)) {
+  const entries = findEntries(root, aliases);
   const seen = new Set();
   const queue = [...entries];
 
@@ -118,7 +141,7 @@ export function collectClientModules(root) {
     }
 
     for (const specifier of collectSpecifiers(file, text)) {
-      const resolved = resolveSpecifier(root, file, specifier);
+      const resolved = resolveSpecifier(root, file, specifier, aliases);
       if (resolved && !seen.has(resolved)) queue.push(resolved);
     }
   }

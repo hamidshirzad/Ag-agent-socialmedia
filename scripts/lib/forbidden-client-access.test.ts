@@ -13,7 +13,7 @@ import {
   scanSource,
   sentinelsFor,
 } from "./forbidden-client-access.mjs";
-import { analyzeViteConfig } from "./vite-config-analysis.mjs";
+import { analyzeViteConfig, extractAliases } from "./vite-config-analysis.mjs";
 import { collectClientModules } from "./client-module-graph.mjs";
 import { validateSources } from "./validate-sources.mjs";
 
@@ -305,6 +305,66 @@ describe("finding 4 — runs on the repository's supported Node range", () => {
   });
 });
 
+// ───────────────── alias drift and non-source client files ─────────────────
+// Both found while reviewing this branch's own diff.
+describe("the client graph follows vite.config.ts rather than assuming it", () => {
+  const config = (target: string) =>
+    `import path from 'path';\n` +
+    `export default { resolve: { alias: { '@': ${target} } } };\n`;
+
+  it("resolves this repository's own alias to the repository root", () => {
+    const text = readFileSync(join(ROOT, "vite.config.ts"), "utf8");
+    const { aliases, problems } = extractAliases("vite.config.ts", text, ROOT);
+    expect(problems).toEqual([]);
+    expect(aliases["@"]).toBe(ROOT);
+  });
+
+  it("follows a repointed alias instead of assuming the root", () => {
+    const { aliases } = extractAliases(
+      "vite.config.ts",
+      config("path.resolve(process.cwd(), './src')"),
+      "/repo",
+    );
+    expect(aliases["@"]).toBe(join("/repo", "src"));
+  });
+
+  it("rejects an alias whose target cannot be evaluated", () => {
+    // Previously the walker hardcoded `@` -> root. Repointing the alias made
+    // aliased imports stop resolving, so those modules left the scanned set and
+    // the guard still passed — the same silent blind spot as scanning only src/.
+    const { problems } = extractAliases("vite.config.ts", config("computeRoot()"), "/repo");
+    expect(problems.join()).toContain("alias '@'");
+  });
+
+  it("rejects an alias map that is not an object literal", () => {
+    const { problems } = extractAliases(
+      "vite.config.ts",
+      "export default { resolve: { alias: buildAliases() } };\n",
+      "/repo",
+    );
+    expect(problems.join()).toContain("not an object literal");
+  });
+
+  it("catches a credential named in a client-reachable JSON file", () => {
+    // The graph walked this file in and then skipped it, because only source
+    // extensions were scanned. A config file is exactly where a key gets pasted.
+    withTempRepo(
+      {
+        "vite.config.ts": config("path.resolve(process.cwd(), '.')"),
+        "index.html": '<script type="module" src="/src/main.tsx"></script>',
+        ".env.example": "GEMINI_API_KEY=\n",
+        "src/main.tsx": "import cfg from '../app-config.json';\nexport default cfg;\n",
+        "app-config.json": '{ "GEMINI_API_KEY": "placeholder" }',
+      },
+      (root) => {
+        const { problems, scanned } = validateSources(root);
+        expect(scanned).toContain("app-config.json");
+        expect(problems.join()).toContain("GEMINI_API_KEY");
+      },
+    );
+  });
+});
+
 // ───────────────────────── the repository ────────────────────────────
 describe("the repository itself", () => {
   it("passes source and config validation", () => {
@@ -319,5 +379,10 @@ describe("the repository itself", () => {
     const { scanned } = validateSources(ROOT);
     expect(scanned.length).toBeGreaterThan(10);
     expect(scanned).not.toContain("server.ts");
+  });
+
+  it("scans the JSON config that ships in the browser bundle", () => {
+    // src/lib/firebase.ts imports it, so the browser receives it.
+    expect(validateSources(ROOT).scanned).toContain("firebase-applet-config.json");
   });
 });

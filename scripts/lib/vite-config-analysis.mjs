@@ -14,6 +14,8 @@
  * spelling questions.
  */
 
+import { join, resolve } from "node:path";
+
 import ts from "typescript";
 
 export const DEFINE_MESSAGE =
@@ -116,4 +118,110 @@ export function analyzeViteConfig(path, text) {
 
   visit(source);
   return { problems };
+}
+
+/**
+ * Statically evaluate a `resolve.alias` target to an absolute path.
+ *
+ * Only the forms this repository can actually produce are understood. Anything
+ * else returns null, and the caller fails closed — an alias whose target cannot
+ * be proven is an alias whose modules might silently drop out of the client
+ * graph, which is precisely the blind spot this guard exists to prevent.
+ *
+ * @param {ts.Expression} node
+ * @param {string} root repository root
+ * @returns {string|null} absolute path, or null if not statically known
+ */
+function evaluateAliasTarget(node, root) {
+  if (ts.isStringLiteralLike(node)) {
+    return node.text.startsWith("/") ? node.text : join(root, node.text);
+  }
+
+  // path.resolve(...) / path.join(...) over statically known parts.
+  if (
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression) &&
+    (node.expression.name.text === "resolve" || node.expression.name.text === "join")
+  ) {
+    const parts = [];
+    for (const arg of node.arguments) {
+      if (ts.isStringLiteralLike(arg)) {
+        parts.push(arg.text);
+        continue;
+      }
+      // process.cwd(), __dirname and import.meta.dirname all denote the root
+      // for a config file that lives at the repository root.
+      const text = arg.getText().replace(/\s+/g, "");
+      if (text === "process.cwd()" || text === "__dirname" || text === "import.meta.dirname") {
+        parts.push(root);
+        continue;
+      }
+      return null;
+    }
+    return parts.length > 0 ? resolve(...parts) : null;
+  }
+
+  return null;
+}
+
+/**
+ * The `resolve.alias` map declared by vite.config.ts.
+ *
+ * The client module graph must resolve `@/x` the same way the bundler does. It
+ * previously hardcoded `@` -> repository root; if someone repointed the alias,
+ * aliased imports would stop resolving, those modules would leave the scanned
+ * set, and the guard would still pass. So the mapping is read from the config
+ * instead of assumed, and an alias that cannot be evaluated is an error.
+ *
+ * @param {string} path display path for messages
+ * @param {string} text vite.config.ts contents
+ * @param {string} root repository root
+ * @returns {{aliases: Record<string,string>, problems: string[]}}
+ */
+export function extractAliases(path, text, root) {
+  const aliases = {};
+  const problems = [];
+  const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+  const visit = (node) => {
+    if (ts.isObjectLiteralExpression(node)) {
+      for (const prop of node.properties) {
+        if (propertyName(prop) !== "alias" || !ts.isPropertyAssignment(prop)) continue;
+
+        if (!ts.isObjectLiteralExpression(prop.initializer)) {
+          problems.push(
+            `${path}: resolve.alias is not an object literal, so the set of ` +
+              `client-reachable modules cannot be determined statically.`,
+          );
+          continue;
+        }
+
+        for (const entry of prop.initializer.properties) {
+          const key = propertyName(entry);
+          if (key === null || !ts.isPropertyAssignment(entry)) {
+            problems.push(
+              `${path}: an entry in resolve.alias is not a plain \`key: value\` ` +
+                `pair, so it cannot be followed when walking the client graph.`,
+            );
+            continue;
+          }
+          const target = evaluateAliasTarget(entry.initializer, root);
+          if (target === null) {
+            problems.push(
+              `${path}: the target of alias '${key}' is not statically ` +
+                `determinable, so modules reached through it would silently ` +
+                `leave the scanned set. Use a literal path or ` +
+                `path.resolve(process.cwd(), ...).`,
+            );
+            continue;
+          }
+          aliases[key] = target;
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+
+  visit(source);
+  return { aliases, problems };
 }
