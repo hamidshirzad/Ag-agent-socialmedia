@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
@@ -10,11 +10,13 @@ import {
   ArrowRight,
   TrendingUp,
   Star,
-  Zap as ZapIcon
+  Zap as ZapIcon,
+  Loader2,
+  Lock
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { motion } from "motion/react";
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import axios from "axios";
 
 const PLANS = [
   {
@@ -28,8 +30,7 @@ const PLANS = [
       "LinkedIn & X Integration",
       "Standard Analytics"
     ],
-    color: "sb-accent",
-    paypalPlanId: import.meta.env.VITE_PAYPAL_PLAN_ID_STARTER
+    color: "sb-accent"
   },
   {
     id: "pro",
@@ -44,8 +45,7 @@ const PLANS = [
       "Priority Queue Access"
     ],
     color: "sb-gold",
-    featured: true,
-    paypalPlanId: import.meta.env.VITE_PAYPAL_PLAN_ID_PRO
+    featured: true
   },
   {
     id: "agency",
@@ -59,34 +59,99 @@ const PLANS = [
       "White-label Reports",
       "Direct API Access"
     ],
-    color: "sb-house",
-    paypalPlanId: import.meta.env.VITE_PAYPAL_PLAN_ID_AGENCY
+    color: "sb-house"
   }
 ];
-
-const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 
 export default function Billing() {
   const { profile, user } = useAuth();
   const { addToast, addNotification } = useNotifications();
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [loadingPlanId, setLoadingPlanId] = useState<string | null>(null);
 
-  const paypalOptions = {
-    clientId: PAYPAL_CLIENT_ID || "test",
-    intent: "subscription",
-    vault: true,
-    currency: "USD",
+  // Handle return from Stripe Checkout
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const isSuccess = queryParams.get("success") === "true";
+    const isCanceled = queryParams.get("canceled") === "true";
+    const planId = queryParams.get("plan");
+    const sessionId = queryParams.get("session_id");
+
+    if (isSuccess && planId) {
+      const planName = PLANS.find((p) => p.id === planId)?.name || planId.toUpperCase();
+
+      addToast({
+        title: "Stripe Checkout Complete",
+        message: `Successfully subscribed to ${planName} Edition! Session: ${sessionId?.substring(0, 16) || "active"}`,
+        type: "success",
+      });
+
+      addNotification(
+        "Billing Plan Modified via Stripe",
+        `Workspace upgraded to ${planName} Edition via Stripe Checkout.`,
+        "billing",
+        { plan: planId }
+      );
+
+      // Persist plan update to Firestore if user logged in
+      if (user?.uid) {
+        import("../lib/firebase").then(({ db }) => {
+          import("firebase/firestore").then(({ doc, updateDoc }) => {
+            updateDoc(doc(db, "users", user.uid), {
+              plan: planId,
+              subscriptionStatus: "active",
+            }).catch((err) => console.error("Error updating user plan in Firestore:", err));
+          });
+        });
+      }
+
+      // Clean URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (isCanceled) {
+      addToast({
+        title: "Checkout Canceled",
+        message: "Stripe Checkout session was canceled. No charges were made.",
+        type: "info",
+      });
+
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [user]);
+
+  const handleStripeCheckout = async (planId: string) => {
+    setLoadingPlanId(planId);
+    try {
+      const response = await axios.post("/api/billing/create-checkout-session", {
+        planId,
+        userId: user?.uid,
+        userEmail: user?.email,
+        successUrl: `${window.location.origin}/billing?success=true&plan=${planId}&session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/billing?canceled=true`,
+      });
+
+      if (response.data?.url) {
+        window.location.href = response.data.url;
+      } else {
+        throw new Error("Invalid session URL returned");
+      }
+    } catch (error: any) {
+      console.error("Stripe Checkout Error:", error);
+      addToast({
+        title: "Checkout Error",
+        message: error.response?.data?.error || "Could not initiate Stripe Checkout session.",
+        type: "error",
+      });
+      setLoadingPlanId(null);
+    }
   };
 
   return (
-    <PayPalScriptProvider options={paypalOptions as any}>
     <div className="flex min-h-screen bg-sb-cream text-black font-sans tracking-sb">
       <Sidebar />
       
       <main className="flex-1 p-12 lg:p-24 overflow-y-auto">
         <header className="mb-16 pb-10 border-b border-black/5">
           <h1 className="text-[4.8rem] font-bold text-sb-green tracking-sb mb-2 uppercase">Billing & Neural Credits</h1>
-          <p className="text-black/40 text-[1.6rem] font-medium italic">Manage your subscription and enterprise-grade AI resources</p>
+          <p className="text-black/40 text-[1.6rem] font-medium italic">Manage your subscription via Stripe Checkout</p>
         </header>
 
         {/* Current Plan Summary */}
@@ -119,109 +184,85 @@ export default function Billing() {
 
         {/* Plan Grid */}
         <section>
-          <h3 className="text-[2.1rem] font-bold text-sb-green uppercase tracking-wider mb-12 flex items-center gap-4">
-            <CreditCard size={28} className="text-sb-accent" /> Upgrade Your Neural Map
-          </h3>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">
+            <h3 className="text-[2.1rem] font-bold text-sb-green uppercase tracking-wider flex items-center gap-4">
+              <CreditCard size={28} className="text-sb-accent" /> Upgrade Your Neural Map
+            </h3>
+            <div className="flex items-center gap-2 text-[1.1rem] font-bold uppercase tracking-widest text-black/40 bg-white/60 px-4 py-2 rounded-full border border-black/5">
+              <Lock size={14} className="text-sb-accent" /> Powered by Stripe Checkout
+            </div>
+          </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {PLANS.map((plan) => (
-              <motion.div 
-                key={plan.id}
-                whileHover={{ y: -8 }}
-                className={cn(
-                  "bg-white rounded-[12px] p-12 pb-16 flex flex-col relative overflow-hidden transition-all",
-                  plan.featured ? "sb-shadow-frap ring-2 ring-sb-gold scale-105 z-10" : "sb-shadow-card",
-                  selectedPlan === plan.id && "ring-2 ring-sb-accent"
-                )}
-              >
-                {plan.featured && (
-                  <div className="absolute top-8 right-[-35px] bg-sb-gold text-sb-house font-black uppercase text-[1rem] tracking-widest px-12 py-1 rotate-45">
-                    Most Popular
-                  </div>
-                )}
-                
-                <h4 className="text-[1.4rem] font-black uppercase tracking-[0.2em] text-sb-green/40 mb-2">{plan.name}</h4>
-                <div className="flex items-baseline gap-2 mb-6">
-                  <span className="text-[4.8rem] font-bold text-sb-green tracking-tight">{plan.price}</span>
-                  <span className="text-[1.6rem] text-black/40 font-medium lowercase">/mo</span>
-                </div>
-                <p className="text-[1.4rem] text-black/60 font-medium italic mb-10 leading-relaxed">{plan.description}</p>
-                
-                <div className="space-y-6 mb-12 flex-1">
-                  {plan.features.map((feature, i) => (
-                    <div key={i} className="flex items-start gap-4">
-                      <div className="w-5 h-5 rounded-full bg-sb-light flex items-center justify-center text-sb-green shrink-0 mt-1">
-                        <CheckCircle2 size={12} />
-                      </div>
-                      <span className="text-[1.35rem] font-medium text-black/80">{feature}</span>
-                    </div>
-                  ))}
-                </div>
+            {PLANS.map((plan) => {
+              const isLoading = loadingPlanId === plan.id;
+              const isCurrent = (profile?.plan || "free").toLowerCase() === plan.id;
 
-                {selectedPlan === plan.id ? (
-                  <div className="space-y-4">
-                    {!plan.paypalPlanId ? (
-                      <p className="text-center text-[1.2rem] text-red-500 font-medium py-4">
-                        Payment not configured. Contact support.
-                      </p>
-                    ) : (
-                      <PayPalButtons
-                        style={{ layout: "vertical", shape: "pill", label: "subscribe" }}
-                        createSubscription={(_data, actions) => {
-                          return actions.subscription.create({ plan_id: plan.paypalPlanId! });
-                        }}
-                        onApprove={async (data) => {
-                          addToast({
-                            title: "Subscription Activated",
-                            message: `Successfully registered ${plan.name} Edition! Transaction ID: ${data.subscriptionID}`,
-                            type: "success"
-                          });
-                          await addNotification(
-                            "Billing Subscription Modified",
-                            `Workspace tier transitioned to ${plan.name} Edition. TransID: ${data.subscriptionID}`,
-                            "billing",
-                            { plan: plan.id, amount: plan.price }
-                          );
-                          try {
-                            const { db } = await import("../lib/firebase");
-                            const { doc, updateDoc } = await import("firebase/firestore");
-                            if (user?.uid) {
-                              await updateDoc(doc(db, "users", user.uid), {
-                                plan: plan.id,
-                                subscriptionStatus: "active"
-                              });
-                            }
-                          } catch (e) {
-                            console.error("Failed to persist plan to database:", e);
-                          }
-                          setSelectedPlan(null);
-                        }}
-                        onError={(err) => {
-                          console.error("PayPal error", err);
-                          addToast({ title: "Payment Error", message: "Something went wrong with PayPal. Please try again.", type: "error" });
-                        }}
-                      />
+              return (
+                <motion.div 
+                  key={plan.id}
+                  whileHover={{ y: -8 }}
+                  className={cn(
+                    "bg-white rounded-[12px] p-12 pb-16 flex flex-col relative overflow-hidden transition-all",
+                    plan.featured ? "sb-shadow-frap ring-2 ring-sb-gold scale-105 z-10" : "sb-shadow-card",
+                    isCurrent && "ring-2 ring-sb-accent bg-sb-light/20"
+                  )}
+                >
+                  {plan.featured && (
+                    <div className="absolute top-8 right-[-35px] bg-sb-gold text-sb-house font-black uppercase text-[1rem] tracking-widest px-12 py-1 rotate-45">
+                      Most Popular
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-[1.4rem] font-black uppercase tracking-[0.2em] text-sb-green/40">{plan.name}</h4>
+                    {isCurrent && (
+                      <span className="bg-sb-accent/10 text-sb-green text-[0.9rem] font-black uppercase px-3 py-1 rounded-full border border-sb-accent/20">
+                        Current Plan
+                      </span>
                     )}
-                    <button
-                      onClick={() => setSelectedPlan(null)}
-                      className="w-full text-[1.2rem] font-bold text-black/30 hover:text-red-500 transition-colors uppercase tracking-widest"
-                    >
-                      Cancel Selection
-                    </button>
                   </div>
-                ) : (
+
+                  <div className="flex items-baseline gap-2 mb-6">
+                    <span className="text-[4.8rem] font-bold text-sb-green tracking-tight">{plan.price}</span>
+                    <span className="text-[1.6rem] text-black/40 font-medium lowercase">/mo</span>
+                  </div>
+                  <p className="text-[1.4rem] text-black/60 font-medium italic mb-10 leading-relaxed">{plan.description}</p>
+                  
+                  <div className="space-y-6 mb-12 flex-1">
+                    {plan.features.map((feature, i) => (
+                      <div key={i} className="flex items-start gap-4">
+                        <div className="w-5 h-5 rounded-full bg-sb-light flex items-center justify-center text-sb-green shrink-0 mt-1">
+                          <CheckCircle2 size={12} />
+                        </div>
+                        <span className="text-[1.35rem] font-medium text-black/80">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
                   <button 
-                    onClick={() => setSelectedPlan(plan.id)}
+                    onClick={() => handleStripeCheckout(plan.id)}
+                    disabled={isLoading}
                     className={cn(
-                      "w-full py-6 rounded-full font-black uppercase tracking-[0.15em] text-[1.4rem] flex items-center justify-center gap-4 transition-all sb-button-active shadow-sm",
-                      plan.featured ? "bg-sb-gold text-sb-house hover:bg-sb-house hover:text-white" : "bg-sb-house text-white hover:bg-sb-green"
+                      "w-full py-6 rounded-full font-black uppercase tracking-[0.15em] text-[1.4rem] flex items-center justify-center gap-4 transition-all sb-button-active shadow-sm cursor-pointer disabled:opacity-50",
+                      plan.featured 
+                        ? "bg-sb-gold text-sb-house hover:bg-sb-house hover:text-white" 
+                        : "bg-sb-house text-white hover:bg-sb-green"
                     )}
                   >
-                    Select {plan.name} <ArrowRight size={18} />
+                    {isLoading ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" /> Preparing Checkout...
+                      </>
+                    ) : (
+                      <>
+                        Checkout with Stripe <ArrowRight size={18} />
+                      </>
+                    )}
                   </button>
-                )}
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </section>
 
@@ -229,7 +270,7 @@ export default function Billing() {
         <div className="mt-24 grid grid-cols-1 md:grid-cols-2 gap-12 border-t border-black/5 pt-16 uppercase tracking-widest text-[1rem] font-black text-black/30">
           <div className="flex items-center gap-4">
             <Shield size={24} className="text-sb-accent/30" />
-            <span>Enterprise Encrypted Transactions • PCI-DSS Compliant</span>
+            <span>Stripe Encrypted Checkout • PCI-DSS Level 1 Security</span>
           </div>
           <div className="flex items-center gap-4 md:justify-end">
             <Star size={24} className="text-sb-gold/30" />
@@ -243,6 +284,6 @@ export default function Billing() {
         <ZapIcon className="fill-white w-6 h-6" />
       </button>
     </div>
-    </PayPalScriptProvider>
   );
 }
+
