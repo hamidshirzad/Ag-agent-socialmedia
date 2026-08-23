@@ -9,6 +9,13 @@ import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 import Stripe from "stripe";
 import { generateContentWithEngine, type AIConfig } from "./src/services/aiService";
+import {
+  enforceUsageLimits,
+  firestorePlanReader,
+  firestoreUsageStore,
+  requireAuth,
+  type AuthedRequest,
+} from "./server/api-guards";
 
 dotenv.config();
 
@@ -34,6 +41,25 @@ const targetDb = getFirestore(dbId || "(default)");
 
 const SUPPORTED_PROVIDERS: AIConfig["provider"][] = ["gemini", "anthropic", "openai"];
 
+/** Server-owned credential for each provider. Read here, never in client code. */
+const SERVER_KEY_ENV: Record<AIConfig["provider"], string> = {
+  gemini: "GEMINI_API_KEY",
+  anthropic: "ANTHROPIC_API_KEY",
+  openai: "OPENAI_API_KEY",
+};
+
+/**
+ * The server's own provider credential, only when explicitly enabled.
+ *
+ * Default OFF. Merging this PR therefore cannot begin spending the project's
+ * paid quota; enabling it is a separate, deliberate act once authentication and
+ * quotas are known to hold.
+ */
+function serverProviderKey(provider: AIConfig["provider"]): string | undefined {
+  if (process.env.ALLOW_SERVER_PROVIDER_KEY !== "true") return undefined;
+  return process.env[SERVER_KEY_ENV[provider]] || undefined;
+}
+
 export function createApp() {
   const app = express();
   app.use(express.json());
@@ -46,30 +72,49 @@ export function createApp() {
   // AI content generation. Mirrors the client-side contract in
   // src/services/aiService.ts so prompts can be executed server-side with the
   // server's own provider credentials instead of a browser-held key.
-  app.post("/api/generate", async (req, res) => {
-    const { prompt, provider = "gemini", apiKey } = req.body || {};
+  //
+  // Gated by a verified Firebase ID token and per-plan usage limits. Both run
+  // BEFORE the provider is called, so an unauthenticated or over-quota caller
+  // costs an upstream request, not an upstream charge.
+  app.post(
+    "/api/generate",
+    requireAuth((token) => admin.auth().verifyIdToken(token)),
+    enforceUsageLimits({
+      store: firestoreUsageStore(targetDb as any),
+      getPlan: firestorePlanReader(targetDb as any),
+    }),
+    async (req, res) => {
+      const { prompt, provider = "gemini", apiKey } = req.body || {};
 
-    if (typeof prompt !== "string" || !prompt.trim()) {
-      return res.status(400).json({ error: "prompt is required" });
-    }
-    if (!SUPPORTED_PROVIDERS.includes(provider)) {
-      return res.status(400).json({ error: `Unsupported AI provider: ${provider}` });
-    }
-    if (apiKey !== undefined && typeof apiKey !== "string") {
-      return res.status(400).json({ error: "apiKey must be a string" });
-    }
+      if (typeof prompt !== "string" || !prompt.trim()) {
+        return res.status(400).json({ error: "prompt is required" });
+      }
+      if (!SUPPORTED_PROVIDERS.includes(provider)) {
+        return res.status(400).json({ error: `Unsupported AI provider: ${provider}` });
+      }
+      if (apiKey !== undefined && typeof apiKey !== "string") {
+        return res.status(400).json({ error: "apiKey must be a string" });
+      }
 
-    try {
-      const data = await generateContentWithEngine(prompt, { provider, apiKey });
-      res.json({ success: true, provider, data });
-    } catch (error: any) {
-      const message = error?.message || "Content generation failed";
-      // A missing credential is a caller problem; anything else is upstream.
-      const status = /API Key missing/i.test(message) ? 400 : 502;
-      console.error(`[/api/generate] ${provider} generation failed:`, message);
-      res.status(status).json({ error: message });
-    }
-  });
+      // The caller's own key wins. Falling back to the server's credential is
+      // opt-in and off by default, so merging this cannot start spending the
+      // project's quota until someone deliberately enables it.
+      const key = apiKey ?? serverProviderKey(provider);
+
+      try {
+        const data = await generateContentWithEngine(prompt, { provider, apiKey: key });
+        const uid = (req as AuthedRequest).user?.uid;
+        console.log(`[/api/generate] ${provider} generation for ${uid}`);
+        res.json({ success: true, provider, data });
+      } catch (error: any) {
+        const message = error?.message || "Content generation failed";
+        // A missing credential is a caller problem; anything else is upstream.
+        const status = /API Key missing/i.test(message) ? 400 : 502;
+        console.error(`[/api/generate] ${provider} generation failed:`, message);
+        res.status(status).json({ error: message });
+      }
+    },
+  );
 
   // OAuth URL construction
   app.get("/api/auth/url/:platform", (req, res) => {
