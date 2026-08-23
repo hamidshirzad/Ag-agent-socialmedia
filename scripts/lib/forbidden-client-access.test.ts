@@ -1,224 +1,388 @@
 import { describe, it, expect } from "vitest";
-import {
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import {
-  FORBIDDEN_ALIASES,
   FORBIDDEN_REF,
-  SENTINELS,
-  SERVER_CREDENTIALS,
+  REQUIRED_FLOOR,
+  aliasesFor,
+  credentialsForRoot,
+  deriveServerCredentials,
   scanArtifactBytes,
   scanSource,
+  sentinelsFor,
 } from "./forbidden-client-access.mjs";
+import { analyzeViteConfig, extractAliases } from "./vite-config-analysis.mjs";
+import { collectClientModules } from "./client-module-graph.mjs";
+import { validateSources } from "./validate-sources.mjs";
 
 const ROOT = resolve(__dirname, "..", "..");
-const problemsIn = (code: string) => scanSource("fixture.ts", code).problems;
+const CREDENTIALS = credentialsForRoot(ROOT);
+const problemsIn = (code: string) => scanSource("fixture.ts", code, CREDENTIALS).problems;
 
-/**
- * Run `fn` against a temporary fixture file and always remove it, even when an
- * assertion throws. No adversarial mutation may survive a failing test run.
- */
-function withFixture(contents: string, fn: (path: string) => void) {
-  const dir = mkdtempSync(join(tmpdir(), "client-secret-fixture-"));
-  const path = join(dir, "fixture.ts");
+/** Always removes the fixture, even when an assertion throws. */
+function withTempRepo(files: Record<string, string>, fn: (root: string) => void) {
+  const root = mkdtempSync(join(tmpdir(), "guard-fixture-"));
   try {
-    writeFileSync(path, contents);
-    fn(path);
+    for (const [rel, contents] of Object.entries(files)) {
+      const full = join(root, rel);
+      mkdirSync(dirname(full), { recursive: true });
+      writeFileSync(full, contents);
+    }
+    fn(root);
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(root, { recursive: true, force: true });
   }
 }
 
-describe("source guard — adversarial access forms", () => {
-  // Every one of these spells the credential somewhere, which is exactly why
-  // the guard matches names rather than chasing syntax.
-  const bypasses: ReadonlyArray<readonly [string, string]> = [
-    ["dot", "const k = process.env.GEMINI_API_KEY;"],
-    ["double-quoted bracket", 'const k = process.env["GEMINI_API_KEY"];'],
-    ["single-quoted bracket", "const k = process.env['GEMINI_API_KEY'];"],
-    ["optional chaining", "const k = process.env?.GEMINI_API_KEY;"],
-    ["optional chaining on both", "const k = process?.env?.GEMINI_API_KEY;"],
-    ["destructuring", "const { GEMINI_API_KEY } = process.env;"],
-    ["destructuring with rename", "const { GEMINI_API_KEY: k } = process.env;"],
-    ["alias variable", "const env = process.env; const k = env.GEMINI_API_KEY;"],
-    ["import.meta dot", "const k = import.meta.env.GEMINI_API_KEY;"],
-    ["import.meta bracket", 'const k = import.meta.env["GEMINI_API_KEY"];'],
-    ["import.meta single-quoted", "const k = import.meta.env['GEMINI_API_KEY'];"],
-    ["import.meta destructuring", "const { GEMINI_API_KEY } = import.meta.env;"],
-    ["typescript cast, full root", "const k = (process.env as any).GEMINI_API_KEY;"],
-    ["typescript cast, mid root", "const k = (import.meta as any).env.GEMINI_API_KEY;"],
-    ["VITE alias, dot", "const k = import.meta.env.VITE_GEMINI_API_KEY;"],
-    ["VITE alias, bracket", 'const k = import.meta.env["VITE_GEMINI_API_KEY"];'],
-    ["VITE alias, destructuring", "const { VITE_GEMINI_API_KEY } = import.meta.env;"],
-    ["VITE alias, cast", "const k = (import.meta as any).env.VITE_GEMINI_API_KEY;"],
+// ───────────────────────────── finding 1 ─────────────────────────────
+describe("finding 1 — every server credential is protected", () => {
+  // Codex: "a client reference such as import.meta.env.VITE_LINKEDIN_CLIENT_SECRET
+  // passes both layers". These are the five it named.
+  const previouslyMissed = [
+    "LINKEDIN_CLIENT_SECRET",
+    "FACEBOOK_CLIENT_SECRET",
+    "X_CLIENT_SECRET",
+    "TIKTOK_CLIENT_SECRET",
+    "PAYPAL_CLIENT_SECRET",
   ];
 
-  it.each(bypasses)("rejects %s", (_label, code) => {
-    expect(problemsIn(code), code).not.toHaveLength(0);
-  });
-
-  it.each(SERVER_CREDENTIALS)("rejects the server credential %s", (name) => {
+  it.each(previouslyMissed)("rejects %s and its VITE_ alias", (name) => {
+    expect(CREDENTIALS).toContain(name);
     expect(problemsIn(`const k = process.env.${name};`)).not.toHaveLength(0);
-    expect(problemsIn(`const { ${name} } = process.env;`)).not.toHaveLength(0);
+    expect(problemsIn(`const k = import.meta.env.VITE_${name};`)).not.toHaveLength(0);
   });
 
-  it.each(FORBIDDEN_ALIASES)("rejects the browser-visible alias %s", (alias) => {
-    const problems = problemsIn(`const k = import.meta.env.${alias};`);
-    expect(problems, alias).not.toHaveLength(0);
-    expect(problems[0]).toContain(alias);
+  it("arms a canary for every credential and alias", () => {
+    const sentinels = sentinelsFor(CREDENTIALS);
+    for (const name of [...CREDENTIALS, ...aliasesFor(CREDENTIALS)]) {
+      expect(sentinels[name], name).toBeTruthy();
+    }
+    // Distinct canaries, so a hit names the exact variable.
+    const values = Object.values(sentinels);
+    expect(new Set(values).size).toBe(values.length);
   });
 
-  it("covers every alias named in the security requirements", () => {
-    expect(FORBIDDEN_ALIASES).toEqual(
-      expect.arrayContaining([
-        "VITE_GEMINI_API_KEY",
-        "VITE_ANTHROPIC_API_KEY",
-        "VITE_OPENAI_API_KEY",
-        "VITE_STRIPE_SECRET_KEY",
-        "VITE_STRIPE_WEBHOOK_SECRET",
-        "VITE_FIREBASE_SERVICE_ACCOUNT",
-        "VITE_DATABASE_URL",
-      ]),
+  it("derives the denylist from .env.example, not a frozen list", () => {
+    const derived = deriveServerCredentials("NEW_PROVIDER_SECRET=\nVITE_PUBLIC_THING=\n");
+    expect(derived).toContain("NEW_PROVIDER_SECRET");
+    expect(derived).not.toContain("VITE_PUBLIC_THING");
+    for (const floor of REQUIRED_FLOOR) expect(derived).toContain(floor);
+  });
+
+  it("keeps public client configuration out of the denylist", () => {
+    // Client IDs and Firebase browser config are published by design.
+    for (const publicName of [
+      "VITE_FIREBASE_API_KEY",
+      "VITE_LINKEDIN_CLIENT_ID",
+      "VITE_PAYPAL_CLIENT_ID",
+      "VITE_STRIPE_PUBLISHABLE_KEY",
+      "VITE_CALENDLY_BOOKING_LINK",
+    ]) {
+      expect(problemsIn(`import.meta.env.${publicName}`), publicName).toHaveLength(0);
+    }
+    expect(CREDENTIALS).not.toContain("APP_URL");
+  });
+});
+
+// ───────────────────────────── finding 3 ─────────────────────────────
+describe("finding 3 — every loadEnv call is inspected", () => {
+  const analyze = (code: string) => analyzeViteConfig("vite.config.ts", code).problems;
+
+  it("rejects an unsafe call that FOLLOWS a safe one", () => {
+    // The exact bypass: String.match only ever saw the first call.
+    const code = `const a = loadEnv(mode, '.', 'VITE_');\nconst b = loadEnv(mode, '.', '');`;
+    expect(analyze(code)).not.toHaveLength(0);
+  });
+
+  it("accepts multiple safe calls", () => {
+    const code = `const a = loadEnv(mode, '.', 'VITE_');\nconst b = loadEnv(mode, '.', 'VITE_');`;
+    expect(analyze(code)).toHaveLength(0);
+  });
+
+  it.each([
+    ["double-quoted empty prefix", `loadEnv(mode, ".", "")`],
+    ["single-quoted empty prefix", `loadEnv(mode, '.', '')`],
+    ["omitted prefix", `loadEnv(mode, '.')`],
+    ["multiline call", `loadEnv(\n  mode,\n  '.',\n  ''\n)`],
+    ["empty prefix inside a list", `loadEnv(mode, '.', ['VITE_', ''])`],
+  ])("rejects %s", (_label, code) => {
+    expect(analyze(code), code).not.toHaveLength(0);
+  });
+
+  it("rejects a prefix it cannot prove safe", () => {
+    expect(analyze(`const p = cond ? '' : 'VITE_'; loadEnv(mode, '.', p);`)).not.toHaveLength(0);
+  });
+});
+
+// ───────────────────────────── finding 6 ─────────────────────────────
+describe("finding 6 — every define property form is rejected", () => {
+  const analyze = (code: string) => analyzeViteConfig("vite.config.ts", code).problems;
+
+  it.each([
+    ["unquoted", `export default { define: { a: 1 } };`],
+    ["double-quoted", `export default { "define": { a: 1 } };`],
+    ["single-quoted", `export default { 'define': { a: 1 } };`],
+    ["computed string", `export default { ["define"]: { a: 1 } };`],
+    ["shorthand", `const define = { a: 1 }; export default { define };`],
+    ["nested in a returned config", `export default defineConfig(() => ({ plugins: [], define: {} }));`],
+  ])("rejects a %s define property", (_label, code) => {
+    expect(analyze(code), code).not.toHaveLength(0);
+  });
+
+  it("rejects a spread it cannot prove free of define", () => {
+    expect(analyze(`export default { ...base, plugins: [] };`)).not.toHaveLength(0);
+  });
+
+  it("accepts the current config shape", () => {
+    const real = readFileSync(join(ROOT, "vite.config.ts"), "utf8");
+    expect(analyzeViteConfig("vite.config.ts", real).problems).toHaveLength(0);
+  });
+});
+
+// ───────────────────────────── finding 5 ─────────────────────────────
+describe("finding 5 — client-reachable modules outside src/ are scanned", () => {
+  it("follows an @/ alias to a root-level module and rejects it", () => {
+    withTempRepo(
+      {
+        "index.html": `<script type="module" src="/src/main.tsx"></script>`,
+        "vite.config.ts": `export default { resolve: { alias: { "@": "." } } };`,
+        ".env.example": "GEMINI_API_KEY=\n",
+        "src/main.tsx": `import { cfg } from "@/shared/config";\nconsole.log(cfg);`,
+        // Root-level, outside src/ — invisible to the old scanner.
+        "shared/config.ts": `export const cfg = process.env.GEMINI_API_KEY;`,
+      },
+      (root) => {
+        const { modules } = collectClientModules(root);
+        expect(modules.some((f) => f.endsWith("shared/config.ts"))).toBe(true);
+        const { problems } = validateSources(root);
+        expect(problems.join("\n")).toContain("GEMINI_API_KEY");
+      },
     );
   });
 
-  it("rejects a credential named only inside a comment", () => {
-    // Deliberately conservative: a reworded comment is cheaper than a leak.
-    expect(problemsIn("// TODO: wire up GEMINI_API_KEY here")).not.toHaveLength(0);
+  it("follows a relative import out of src/", () => {
+    withTempRepo(
+      {
+        "index.html": `<script type="module" src="/src/main.tsx"></script>`,
+        "vite.config.ts": `export default {};`,
+        ".env.example": "STRIPE_SECRET_KEY=\n",
+        "src/main.tsx": `import "../lib/helper";`,
+        "lib/helper.ts": `export const k = process.env.STRIPE_SECRET_KEY;`,
+      },
+      (root) => {
+        expect(validateSources(root).problems.join("\n")).toContain("STRIPE_SECRET_KEY");
+      },
+    );
   });
 
-  it("reads fixtures from disk the way the scanner does", () => {
-    withFixture('const k = import.meta.env["VITE_GEMINI_API_KEY"];', (path) => {
-      const found = scanSource(path, readFileSync(path, "utf8")).problems;
-      expect(found).not.toHaveLength(0);
-    });
+  it("does NOT scan server-only modules the client never imports", () => {
+    // server.ts legitimately reads secrets. Flagging it would train everyone
+    // to ignore the guard.
+    withTempRepo(
+      {
+        "index.html": `<script type="module" src="/src/main.tsx"></script>`,
+        "vite.config.ts": `export default {};`,
+        ".env.example": "STRIPE_SECRET_KEY=\n",
+        "src/main.tsx": `console.log("hello");`,
+        "server.ts": `const k = process.env.STRIPE_SECRET_KEY;`,
+      },
+      (root) => {
+        expect(validateSources(root).problems).toEqual([]);
+      },
+    );
+  });
+
+  it("does not pass vacuously when there is no entry point", () => {
+    withTempRepo(
+      { "vite.config.ts": `export default {};`, ".env.example": "" },
+      (root) => {
+        expect(validateSources(root).problems.join("\n")).toContain("entry point");
+      },
+    );
   });
 });
 
-describe("source guard — legitimate configuration is allowed", () => {
-  it("allows public Firebase browser configuration", () => {
-    // VITE_FIREBASE_API_KEY is published by design and is a different thing
-    // from FIREBASE_SERVICE_ACCOUNT. Its value shape is never inspected.
-    const code = `
-      const firebaseConfig = {
-        apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-        authDomain: import.meta.env["VITE_FIREBASE_AUTH_DOMAIN"],
-        projectId: import.meta.env['VITE_FIREBASE_PROJECT_ID'],
-        appId: import.meta.env.VITE_FIREBASE_APP_ID,
-      };
-    `;
-    expect(problemsIn(code)).toHaveLength(0);
+// ─────────────────────── access forms (regression) ───────────────────
+describe("source guard — adversarial access forms", () => {
+  it.each([
+    ["dot", "const k = process.env.GEMINI_API_KEY;"],
+    ["double-quoted bracket", 'const k = process.env["GEMINI_API_KEY"];'],
+    ["single-quoted bracket", "const k = process.env['GEMINI_API_KEY'];"],
+    ["optional chaining", "const k = process?.env?.GEMINI_API_KEY;"],
+    ["destructuring", "const { GEMINI_API_KEY } = process.env;"],
+    ["alias variable", "const env = process.env; const k = env.GEMINI_API_KEY;"],
+    ["import.meta dot", "const k = import.meta.env.GEMINI_API_KEY;"],
+    ["import.meta bracket", 'const k = import.meta.env["GEMINI_API_KEY"];'],
+    ["VITE alias", "const k = import.meta.env.VITE_GEMINI_API_KEY;"],
+    ["VITE alias bracket", 'const k = import.meta.env["VITE_GEMINI_API_KEY"];'],
+    ["typescript cast", "const k = (import.meta as any).env.VITE_GEMINI_API_KEY;"],
+    ["comment only", "// TODO: wire up GEMINI_API_KEY"],
+  ])("rejects %s", (_label, code) => {
+    expect(problemsIn(code), code).not.toHaveLength(0);
   });
 
   it("allows an AIza-shaped literal, judging names and never values", () => {
-    expect(
-      problemsIn('const k = "AIzaSyBExampleNotARealKeyShapedLikeOne00000";'),
-    ).toHaveLength(0);
-  });
-
-  it("allows the VITE_ values this app actually uses", () => {
-    expect(
-      problemsIn("const l = import.meta.env.VITE_CALENDLY_BOOKING_LINK;"),
-    ).toHaveLength(0);
-  });
-
-  it("does not reject a VITE_ name merely for ending in API_KEY", () => {
-    expect(problemsIn("import.meta.env.VITE_PUBLIC_MAPS_API_KEY")).toHaveLength(0);
+    expect(problemsIn('const k = "AIzaSyBExampleNotARealKeyShapedLikeOne00000";')).toHaveLength(0);
   });
 });
 
-describe("source guard — warnings stay warnings", () => {
-  it("reports a non-credential client process.env read without failing", () => {
-    const code = "const k = (process.env as any).API_KEY;";
-    const { problems, warnings } = scanSource("videoService.ts", code);
-    expect(problems).toHaveLength(0);
-    expect(warnings.join()).toContain("API_KEY");
-  });
-});
-
+// ───────────────────────── output guard ──────────────────────────────
 describe("output guard — byte scanning", () => {
-  it("finds the server credential canary in emitted JavaScript", () => {
-    const js = `const t=e||"${SENTINELS.GEMINI_API_KEY}";`;
-    expect(scanArtifactBytes("dist/app.js", Buffer.from(js))).not.toHaveLength(0);
+  const sentinels = sentinelsFor(CREDENTIALS);
+
+  it("finds a credential canary in emitted JavaScript", () => {
+    const js = `const t="${sentinels.GEMINI_API_KEY}";`;
+    expect(scanArtifactBytes("dist/app.js", Buffer.from(js), sentinels)).not.toHaveLength(0);
   });
 
-  it("finds a forbidden VITE alias canary in emitted JavaScript", () => {
-    const js = `const t="${SENTINELS.VITE_GEMINI_API_KEY}";`;
-    const found = scanArtifactBytes("dist/app.js", Buffer.from(js));
+  it("finds a newly protected alias canary", () => {
+    const js = `const t="${sentinels.VITE_LINKEDIN_CLIENT_SECRET}";`;
+    const found = scanArtifactBytes("dist/app.js", Buffer.from(js), sentinels);
     expect(found).not.toHaveLength(0);
-    expect(found[0]).toContain("VITE_GEMINI_API_KEY");
-  });
-
-  it.each(FORBIDDEN_ALIASES)("has a distinct canary for %s", (alias) => {
-    const others = Object.entries(SENTINELS).filter(([n]) => n !== alias);
-    expect(others.some(([, c]) => c === SENTINELS[alias])).toBe(false);
-    const found = scanArtifactBytes("dist/app.js", Buffer.from(SENTINELS[alias]));
-    expect(found, alias).not.toHaveLength(0);
+    expect(found[0]).toContain("VITE_LINKEDIN_CLIENT_SECRET");
   });
 
   it("finds a canary planted in a source map", () => {
     const map = JSON.stringify({
       version: 3,
       sources: ["../src/x.ts"],
-      sourcesContent: [`const k = "${SENTINELS.VITE_GEMINI_API_KEY}";`],
+      sourcesContent: [`const k = "${sentinels.VITE_GEMINI_API_KEY}";`],
     });
-    expect(scanArtifactBytes("dist/app.js.map", Buffer.from(map))).not.toHaveLength(0);
+    expect(scanArtifactBytes("dist/app.js.map", Buffer.from(map), sentinels)).not.toHaveLength(0);
   });
 
   it("finds a canary planted in a binary artifact", () => {
     const binary = Buffer.concat([
-      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01, 0xff]),
-      Buffer.from(SENTINELS.GEMINI_API_KEY, "utf8"),
-      Buffer.from([0x00, 0xfe]),
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0xff]),
+      Buffer.from(sentinels.STRIPE_SECRET_KEY, "utf8"),
+      Buffer.from([0x00]),
     ]);
-    expect(scanArtifactBytes("dist/logo.png", binary)).not.toHaveLength(0);
+    expect(scanArtifactBytes("dist/logo.png", binary, sentinels)).not.toHaveLength(0);
   });
 
   it("finds the literal server-environment reference", () => {
     expect(
-      scanArtifactBytes("dist/app.js", Buffer.from(`x=${FORBIDDEN_REF}`)),
+      scanArtifactBytes("dist/app.js", Buffer.from(`x=${FORBIDDEN_REF}`), sentinels),
     ).not.toHaveLength(0);
   });
 
-  it("passes a clean artifact", () => {
-    expect(scanArtifactBytes("dist/app.js", Buffer.from("const t=e;"))).toEqual([]);
-  });
-
-  it("uses canaries that are not key-shaped", () => {
-    for (const canary of Object.values(SENTINELS)) {
+  it("passes a clean artifact and uses no key-shaped canary", () => {
+    expect(scanArtifactBytes("dist/app.js", Buffer.from("const t=e;"), sentinels)).toEqual([]);
+    for (const canary of Object.values(sentinels)) {
       expect(canary).not.toMatch(/^AIza/);
       expect(canary).toContain("CANARY_DO_NOT_SHIP");
     }
   });
 });
 
-describe("the repository itself", () => {
-  const walk = (dir: string): string[] =>
-    readdirSync(dir).flatMap((e) => {
-      const full = join(dir, e);
-      return statSync(full).isDirectory() ? walk(full) : [full];
-    });
+// ───────────────────────────── finding 4 ─────────────────────────────
+describe("finding 4 — runs on the repository's supported Node range", () => {
+  // `import.meta.dirname` landed in Node 20.11. The repo declares no narrower
+  // engine and Vite supports Node 18, so using it made the guard unrunnable on
+  // an otherwise supported install. server.ts already uses fileURLToPath.
+  const scripts = [
+    "scripts/check-client-secrets.mjs",
+    "scripts/validate-client-config.mjs",
+  ];
 
-  it("is clean: no forbidden credential name anywhere in src/", () => {
-    const problems = walk(join(ROOT, "src"))
-      .filter((f) => /\.(ts|tsx|js|jsx)$/.test(f))
-      .flatMap((f) => scanSource(relative(ROOT, f), readFileSync(f, "utf8")).problems);
+  it.each(scripts)("%s does not evaluate import.meta.dirname", (rel) => {
+    const text = readFileSync(join(ROOT, rel), "utf8");
+    const code = text
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    expect(code).not.toContain("import.meta.dirname");
+    expect(code).toContain("fileURLToPath(import.meta.url)");
+  });
+
+  it.each(scripts)("%s resolves the repository root correctly", (rel) => {
+    // Same computation the script performs, verified to land on the repo root.
+    const scriptPath = join(ROOT, rel);
+    const derived = resolve(dirname(scriptPath), "..");
+    expect(derived).toBe(ROOT);
+    expect(readFileSync(join(derived, "package.json"), "utf8")).toContain("test:client-secrets");
+  });
+});
+
+// ───────────────── alias drift and non-source client files ─────────────────
+// Both found while reviewing this branch's own diff.
+describe("the client graph follows vite.config.ts rather than assuming it", () => {
+  const config = (target: string) =>
+    `import path from 'path';\n` +
+    `export default { resolve: { alias: { '@': ${target} } } };\n`;
+
+  it("resolves this repository's own alias to the repository root", () => {
+    const text = readFileSync(join(ROOT, "vite.config.ts"), "utf8");
+    const { aliases, problems } = extractAliases("vite.config.ts", text, ROOT);
     expect(problems).toEqual([]);
+    expect(aliases["@"]).toBe(ROOT);
+  });
+
+  it("follows a repointed alias instead of assuming the root", () => {
+    const { aliases } = extractAliases(
+      "vite.config.ts",
+      config("path.resolve(process.cwd(), './src')"),
+      "/repo",
+    );
+    expect(aliases["@"]).toBe(join("/repo", "src"));
+  });
+
+  it("rejects an alias whose target cannot be evaluated", () => {
+    // Previously the walker hardcoded `@` -> root. Repointing the alias made
+    // aliased imports stop resolving, so those modules left the scanned set and
+    // the guard still passed — the same silent blind spot as scanning only src/.
+    const { problems } = extractAliases("vite.config.ts", config("computeRoot()"), "/repo");
+    expect(problems.join()).toContain("alias '@'");
+  });
+
+  it("rejects an alias map that is not an object literal", () => {
+    const { problems } = extractAliases(
+      "vite.config.ts",
+      "export default { resolve: { alias: buildAliases() } };\n",
+      "/repo",
+    );
+    expect(problems.join()).toContain("not an object literal");
+  });
+
+  it("catches a credential named in a client-reachable JSON file", () => {
+    // The graph walked this file in and then skipped it, because only source
+    // extensions were scanned. A config file is exactly where a key gets pasted.
+    withTempRepo(
+      {
+        "vite.config.ts": config("path.resolve(process.cwd(), '.')"),
+        "index.html": '<script type="module" src="/src/main.tsx"></script>',
+        ".env.example": "GEMINI_API_KEY=\n",
+        "src/main.tsx": "import cfg from '../app-config.json';\nexport default cfg;\n",
+        "app-config.json": '{ "GEMINI_API_KEY": "placeholder" }',
+      },
+      (root) => {
+        const { problems, scanned } = validateSources(root);
+        expect(scanned).toContain("app-config.json");
+        expect(problems.join()).toContain("GEMINI_API_KEY");
+      },
+    );
+  });
+});
+
+// ───────────────────────── the repository ────────────────────────────
+describe("the repository itself", () => {
+  it("passes source and config validation", () => {
+    expect(validateSources(ROOT).problems).toEqual([]);
   });
 
   it("still warns about the pre-existing videoService read", () => {
-    const warnings = scanSource(
-      "src/services/videoService.ts",
-      readFileSync(join(ROOT, "src/services/videoService.ts"), "utf8"),
-    ).warnings;
-    expect(warnings.join()).toContain("API_KEY");
+    expect(validateSources(ROOT).warnings.join()).toContain("API_KEY");
+  });
+
+  it("scans a client module graph that excludes server.ts", () => {
+    const { scanned } = validateSources(ROOT);
+    expect(scanned.length).toBeGreaterThan(10);
+    expect(scanned).not.toContain("server.ts");
+  });
+
+  it("scans the JSON config that ships in the browser bundle", () => {
+    // src/lib/firebase.ts imports it, so the browser receives it.
+    expect(validateSources(ROOT).scanned).toContain("firebase-applet-config.json");
   });
 });

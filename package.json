@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
+    "prebuild": "npm run validate:client-config",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
@@ -12,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:client-secrets": "node scripts/check-client-secrets.mjs"
+    "test:client-secrets": "node scripts/check-client-secrets.mjs",
+    "validate:client-config": "node scripts/validate-client-config.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
