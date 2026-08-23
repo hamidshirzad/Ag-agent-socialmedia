@@ -175,9 +175,32 @@ export function enforceUsageLimits(options: UsageLimitOptions) {
       return res.status(429).json({ error: "Too many requests. Try again in a minute." });
     }
 
-    const plan = await getPlan(user.uid);
-    const allowance = PLAN_DAILY_GENERATIONS[plan];
-    const { allowed, used } = await store.consume(user.uid, utcDay(now()), allowance);
+    let plan: PlanName;
+    let allowance: number;
+    let allowed: boolean;
+    let used: number;
+
+    try {
+      plan = await getPlan(user.uid);
+      allowance = PLAN_DAILY_GENERATIONS[plan];
+      ({ allowed, used } = await store.consume(user.uid, utcDay(now()), allowance));
+    } catch {
+      // The durable counter is what keeps this endpoint's blast radius finite,
+      // so a store failure must never fall through to the provider.
+      //
+      // It must also never propagate. Express 4 does not forward an async
+      // middleware's rejection to an error handler, so an unguarded throw here
+      // escapes as an unhandled rejection — which on Node's default settings
+      // terminates the process. That turns any Firestore hiccup, or anything a
+      // caller can do to provoke one, into a way to take the server down.
+      //
+      // Fail closed with a retryable 503: shedding the request is strictly
+      // better than crashing, and than letting it past the quota.
+      res.setHeader("Retry-After", "60");
+      return res
+        .status(503)
+        .json({ error: "Usage service temporarily unavailable. Try again shortly." });
+    }
 
     res.setHeader("X-Quota-Limit", String(allowance));
     res.setHeader("X-Quota-Used", String(Math.min(used, allowance)));

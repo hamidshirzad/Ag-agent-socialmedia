@@ -290,6 +290,19 @@ describe("Express Server API", () => {
       expect(res.headers["retry-after"]).toBe("60");
     });
 
+    it("fails closed, and does not crash, when the usage store errors", async () => {
+      // Express 4 does not forward an async middleware's rejection to an error
+      // handler, so an unguarded throw escapes as an unhandled rejection and
+      // takes the process down. Refusing the request is the only safe outcome.
+      firestoreMock.runTransaction.mockRejectedValueOnce(new Error("firestore unavailable"));
+
+      const res = await authed("/api/generate").send({ prompt: "hi" });
+
+      expect(res.status).toBe(503);
+      expect(res.headers["retry-after"]).toBe("60");
+      expect(generateContentWithEngine).not.toHaveBeenCalled();
+    });
+
     it("does not reach for the server credential unless explicitly enabled", async () => {
       process.env.OPENAI_API_KEY = "server-side-value";
 
