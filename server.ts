@@ -8,6 +8,14 @@ import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 import Stripe from "stripe";
+import { generateContentWithEngine, type AIConfig } from "./src/services/aiService";
+import {
+  enforceUsageLimits,
+  firestorePlanReader,
+  firestoreUsageStore,
+  requireAuth,
+  type AuthedRequest,
+} from "./server/api-guards";
 
 dotenv.config();
 
@@ -31,6 +39,27 @@ if (!admin.apps.length) {
 const dbId = firebaseConfig.firestoreDatabaseId;
 const targetDb = getFirestore(dbId || "(default)");
 
+const SUPPORTED_PROVIDERS: AIConfig["provider"][] = ["gemini", "anthropic", "openai"];
+
+/** Server-owned credential for each provider. Read here, never in client code. */
+const SERVER_KEY_ENV: Record<AIConfig["provider"], string> = {
+  gemini: "GEMINI_API_KEY",
+  anthropic: "ANTHROPIC_API_KEY",
+  openai: "OPENAI_API_KEY",
+};
+
+/**
+ * The server's own provider credential, only when explicitly enabled.
+ *
+ * Default OFF. Merging this PR therefore cannot begin spending the project's
+ * paid quota; enabling it is a separate, deliberate act once authentication and
+ * quotas are known to hold.
+ */
+function serverProviderKey(provider: AIConfig["provider"]): string | undefined {
+  if (process.env.ALLOW_SERVER_PROVIDER_KEY !== "true") return undefined;
+  return process.env[SERVER_KEY_ENV[provider]] || undefined;
+}
+
 export function createApp() {
   const app = express();
   app.use(express.json());
@@ -39,6 +68,53 @@ export function createApp() {
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
+
+  // AI content generation. Mirrors the client-side contract in
+  // src/services/aiService.ts so prompts can be executed server-side with the
+  // server's own provider credentials instead of a browser-held key.
+  //
+  // Gated by a verified Firebase ID token and per-plan usage limits. Both run
+  // BEFORE the provider is called, so an unauthenticated or over-quota caller
+  // costs an upstream request, not an upstream charge.
+  app.post(
+    "/api/generate",
+    requireAuth((token) => admin.auth().verifyIdToken(token)),
+    enforceUsageLimits({
+      store: firestoreUsageStore(targetDb as any),
+      getPlan: firestorePlanReader(targetDb as any),
+    }),
+    async (req, res) => {
+      const { prompt, provider = "gemini", apiKey } = req.body || {};
+
+      if (typeof prompt !== "string" || !prompt.trim()) {
+        return res.status(400).json({ error: "prompt is required" });
+      }
+      if (!SUPPORTED_PROVIDERS.includes(provider)) {
+        return res.status(400).json({ error: `Unsupported AI provider: ${provider}` });
+      }
+      if (apiKey !== undefined && typeof apiKey !== "string") {
+        return res.status(400).json({ error: "apiKey must be a string" });
+      }
+
+      // The caller's own key wins. Falling back to the server's credential is
+      // opt-in and off by default, so merging this cannot start spending the
+      // project's quota until someone deliberately enables it.
+      const key = apiKey ?? serverProviderKey(provider);
+
+      try {
+        const data = await generateContentWithEngine(prompt, { provider, apiKey: key });
+        const uid = (req as AuthedRequest).user?.uid;
+        console.log(`[/api/generate] ${provider} generation for ${uid}`);
+        res.json({ success: true, provider, data });
+      } catch (error: any) {
+        const message = error?.message || "Content generation failed";
+        // A missing credential is a caller problem; anything else is upstream.
+        const status = /API Key missing/i.test(message) ? 400 : 502;
+        console.error(`[/api/generate] ${provider} generation failed:`, message);
+        res.status(status).json({ error: message });
+      }
+    },
+  );
 
   // OAuth URL construction
   app.get("/api/auth/url/:platform", (req, res) => {
@@ -365,25 +441,26 @@ export function createApp() {
 
   // PayPal Webhook
   app.post("/api/billing/webhook", async (req, res) => {
-    const event = req.body;
+    const event = req.body || {};
     const eventType = event.event_type;
-    const resource = event.resource;
-    
+    const resource = event.resource || {};
+
     console.log(`[PayPal Webhook] ${eventType} received:`, event.id);
 
     try {
-      // Log all events to Firestore for audit trail
+      // Log all events to Firestore for audit trail. Firestore rejects
+      // `undefined`, so fall back to null for anything the event omits.
       await targetDb.collection("billing_events").add({
-        id: event.id,
-        type: eventType,
-        resourceId: resource.id,
+        id: event.id ?? null,
+        type: eventType ?? null,
+        resourceId: resource.id ?? null,
         receivedAt: new Date(),
         data: resource
       });
 
       switch (eventType) {
         case "PAYMENT.AUTHORIZATION.CREATED":
-          console.log(`Authorization created for amount ${resource.amount.total} ${resource.amount.currency}`);
+          console.log(`Authorization created for amount ${resource.amount?.total} ${resource.amount?.currency}`);
           // Potential logic: Trigger manual review or notification for high-value orders
           break;
         
@@ -403,7 +480,7 @@ export function createApp() {
           break;
 
         case "PAYMENT.SALE.COMPLETED":
-          console.log(`Sale completed for ${resource.amount.total}`);
+          console.log(`Sale completed for ${resource.amount?.total}`);
           break;
 
         case "BILLING.SUBSCRIPTION.CANCELLED":
@@ -454,6 +531,12 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  console.error("Failed to start server:", err);
-});
+// Only boot the HTTP/Vite server when this file is the process entry point.
+// Importing it (e.g. from server.test.ts) must not bind a port.
+const isEntryPoint = Boolean(process.argv[1]) && path.resolve(process.argv[1]) === __filename;
+
+if (isEntryPoint) {
+  startServer().catch((err) => {
+    console.error("Failed to start server:", err);
+  });
+}
