@@ -16,7 +16,7 @@
  * Three layers, cheapest first:
  *   1. a verified Firebase ID token           — who is calling
  *   2. an in-process burst limiter            — stops hammering, no I/O
- *   3. a persisted per-plan daily quota       — survives restarts and instances
+ *   3. a persisted per-plan quota             — survives restarts and instances
  *
  * Everything here takes its dependencies as arguments so the policy can be
  * tested without Firebase.
@@ -74,22 +74,46 @@ export function requireAuth(verifyIdToken: VerifyIdToken) {
 // ─────────────────────────────── usage limits ──────────────────────────────
 
 /**
- * Daily generation ceilings per plan.
+ * What each plan is allowed, and over what window.
  *
- * These are enforcement numbers, not a pricing decision — they exist so the
- * endpoint has a finite blast radius. Confirm them against what Starter (€29),
- * Pro (€79) and Agency (€199) are actually sold as, and adjust here.
+ * These follow what src/pages/Billing.tsx actually sells, because a quota that
+ * disagrees with the pricing page is a bug in whichever direction it points:
+ *
+ *   Starter  $29   "100 AI Generations / mo"    → a real product limit
+ *   Pro      $99   "Unlimited AI Generations"   → no product limit
+ *   Agency   $299  "Everything in Pro"          → no product limit
+ *
+ * `kind` records which of those two a number is, and that distinction is the
+ * point. A `plan` limit is something the customer bought and can be quoted back
+ * to them. A `safety` limit exists only to keep this endpoint's blast radius
+ * finite on a plan sold as unlimited — it must never be described to a caller
+ * as their plan's allowance, or the product contradicts its own pricing.
+ *
+ * Sizing the safety ceilings: the burst limiter below already caps any single
+ * caller at 10/min, i.e. 14,400/day, so a daily ceiling only bites below that
+ * figure. These sit meaningfully under it while staying far beyond human use.
  */
-export const PLAN_DAILY_GENERATIONS = {
-  starter: 50,
-  pro: 300,
-  agency: 2000,
+export const PLAN_GENERATION_LIMITS = {
+  // No paid plan. Billing.tsx renders this state as "Free Edition" but
+  // describes no allowance, so this figure is a placeholder rather than
+  // something a customer was promised.
+  free: { limit: 10, period: "month", kind: "plan" },
+  starter: { limit: 100, period: "month", kind: "plan" },
+  pro: { limit: 2_000, period: "day", kind: "safety" },
+  agency: { limit: 10_000, period: "day", kind: "safety" },
 } as const;
 
-export type PlanName = keyof typeof PLAN_DAILY_GENERATIONS;
+export type PlanName = keyof typeof PLAN_GENERATION_LIMITS;
+export type QuotaPeriod = (typeof PLAN_GENERATION_LIMITS)[PlanName]["period"];
 
-/** An unknown or absent plan gets the smallest allowance, never the largest. */
-export const DEFAULT_PLAN: PlanName = "starter";
+/**
+ * An unknown or absent plan gets the smallest allowance, never the largest.
+ *
+ * This is the free tier rather than Starter: someone with no plan has paid for
+ * nothing, and handing them a paying tier's quota is the expensive direction in
+ * which to be wrong.
+ */
+export const DEFAULT_PLAN: PlanName = "free";
 
 /** Per-user ceiling on requests in any 60-second window. */
 export const BURST_PER_MINUTE = 10;
@@ -97,17 +121,21 @@ export const BURST_PER_MINUTE = 10;
 export function planFor(value: unknown): PlanName {
   if (typeof value !== "string") return DEFAULT_PLAN;
   const normalized = value.toLowerCase();
-  return normalized in PLAN_DAILY_GENERATIONS ? (normalized as PlanName) : DEFAULT_PLAN;
+  return normalized in PLAN_GENERATION_LIMITS ? (normalized as PlanName) : DEFAULT_PLAN;
 }
 
-/** Quota day in UTC, so a counter cannot be reset by changing timezone. */
-export function utcDay(now: Date): string {
-  return now.toISOString().slice(0, 10);
+/**
+ * The counter bucket a use falls in, in UTC so it cannot be reset by changing
+ * timezone. A monthly allowance cannot be expressed in daily buckets, so the
+ * bucket granularity follows the plan: `YYYY-MM` or `YYYY-MM-DD`.
+ */
+export function periodKey(period: QuotaPeriod, now: Date): string {
+  return now.toISOString().slice(0, period === "month" ? 7 : 10);
 }
 
 export interface UsageStore {
   /** Atomically record one use. Returns whether it was permitted. */
-  consume(uid: string, day: string, limit: number): Promise<{ allowed: boolean; used: number }>;
+  consume(uid: string, period: string, limit: number): Promise<{ allowed: boolean; used: number }>;
 }
 
 /**
@@ -176,14 +204,18 @@ export function enforceUsageLimits(options: UsageLimitOptions) {
     }
 
     let plan: PlanName;
-    let allowance: number;
+    let limits: (typeof PLAN_GENERATION_LIMITS)[PlanName];
     let allowed: boolean;
     let used: number;
 
     try {
       plan = await getPlan(user.uid);
-      allowance = PLAN_DAILY_GENERATIONS[plan];
-      ({ allowed, used } = await store.consume(user.uid, utcDay(now()), allowance));
+      limits = PLAN_GENERATION_LIMITS[plan];
+      ({ allowed, used } = await store.consume(
+        user.uid,
+        periodKey(limits.period, now()),
+        limits.limit,
+      ));
     } catch {
       // The durable counter is what keeps this endpoint's blast radius finite,
       // so a store failure must never fall through to the provider.
@@ -202,12 +234,19 @@ export function enforceUsageLimits(options: UsageLimitOptions) {
         .json({ error: "Usage service temporarily unavailable. Try again shortly." });
     }
 
-    res.setHeader("X-Quota-Limit", String(allowance));
-    res.setHeader("X-Quota-Used", String(Math.min(used, allowance)));
+    res.setHeader("X-Quota-Limit", String(limits.limit));
+    res.setHeader("X-Quota-Used", String(Math.min(used, limits.limit)));
+    res.setHeader("X-Quota-Period", limits.period);
 
     if (!allowed) {
+      // Deliberately no Retry-After here. The burst path above knows the window
+      // is 60 seconds; this one may not free up until next month, and quoting a
+      // minute would be a wrong answer rather than a missing one.
       return res.status(429).json({
-        error: `Daily generation limit reached for the ${plan} plan (${allowance}/day).`,
+        error:
+          limits.kind === "plan"
+            ? `Generation limit reached for the ${plan} plan (${limits.limit} per ${limits.period}).`
+            : "Unusual request volume for this account. Try again later.",
       });
     }
 
@@ -226,14 +265,14 @@ interface FirestoreLike {
 }
 
 /**
- * Durable counter, one document per user per UTC day. A transaction is used
+ * Durable counter, one document per user per quota period. A transaction is used
  * rather than an increment so the read and the ceiling check cannot race two
  * concurrent requests past the limit.
  */
 export function firestoreUsageStore(db: FirestoreLike): UsageStore {
   return {
-    async consume(uid, day, limit) {
-      const ref = db.collection("usage_counters").doc(`${uid}_${day}`);
+    async consume(uid, period, limit) {
+      const ref = db.collection("usage_counters").doc(`${uid}_${period}`);
 
       return db.runTransaction(async (tx) => {
         const snapshot = await tx.get(ref);
@@ -243,7 +282,7 @@ export function firestoreUsageStore(db: FirestoreLike): UsageStore {
 
         tx.set(
           ref,
-          { uid, day, count: used + 1, updatedAt: new Date() },
+          { uid, period, count: used + 1, updatedAt: new Date() },
           { merge: true },
         );
         return { allowed: true, used: used + 1 };

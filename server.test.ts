@@ -72,6 +72,9 @@ describe("Express Server API", () => {
 
   let uidCounter = 0;
   let currentUid = "user_0";
+  // Counter buckets are per-plan: monthly plans meter on YYYY-MM, the daily
+  // safety ceilings on YYYY-MM-DD.
+  const thisMonth = () => new Date().toISOString().slice(0, 7);
   const today = () => new Date().toISOString().slice(0, 10);
 
   beforeEach(() => {
@@ -247,18 +250,77 @@ describe("Express Server API", () => {
       const res = await authed("/api/generate").send({ prompt: "hi" });
 
       expect(res.status).toBe(200);
-      expect(res.headers["x-quota-limit"]).toBe("50");
+      // Starter is sold as "100 AI Generations / mo".
+      expect(res.headers["x-quota-limit"]).toBe("100");
       expect(res.headers["x-quota-used"]).toBe("1");
+      expect(res.headers["x-quota-period"]).toBe("month");
     });
 
-    it("refuses once the plan's daily allowance is spent", async () => {
-      usageDocs.set(`${currentUid}_${today()}`, { count: 50 });
+    it("meters a monthly plan on a monthly bucket, not a daily one", async () => {
+      // A daily bucket cannot express "100 per month": it would grant 100 every
+      // day. Spending the month's allowance must refuse the next call today.
+      usageDocs.set(`${currentUid}_${thisMonth()}`, { count: 100 });
+
+      const res = await authed("/api/generate").send({ prompt: "hi" });
+
+      expect(res.status).toBe(429);
+      expect(generateContentWithEngine).not.toHaveBeenCalled();
+    });
+
+    it("refuses on the 101st Starter call and quotes the plan's own terms", async () => {
+      usageDocs.set(`${currentUid}_${thisMonth()}`, { count: 100 });
 
       const res = await authed("/api/generate").send({ prompt: "hi" });
 
       expect(res.status).toBe(429);
       expect(res.body.error).toContain("starter");
+      expect(res.body.error).toContain("100 per month");
       expect(generateContentWithEngine).not.toHaveBeenCalled();
+    });
+
+    it("starts a fresh allowance in the next month", async () => {
+      const lastMonth = new Date();
+      lastMonth.setUTCMonth(lastMonth.getUTCMonth() - 1);
+      usageDocs.set(`${currentUid}_${lastMonth.toISOString().slice(0, 7)}`, { count: 100 });
+
+      const res = await authed("/api/generate").send({ prompt: "hi" });
+
+      expect(res.status).toBe(200);
+      expect(res.headers["x-quota-used"]).toBe("1");
+    });
+
+    it("meters a plan sold as unlimited on a daily safety ceiling", async () => {
+      userPlan.value = "pro";
+
+      const res = await authed("/api/generate").send({ prompt: "hi" });
+
+      expect(res.status).toBe(200);
+      expect(res.headers["x-quota-period"]).toBe("day");
+      expect(res.headers["x-quota-limit"]).toBe("2000");
+    });
+
+    it("does not refuse a Pro caller at the old 300/day ceiling", async () => {
+      // The regression this guards: Pro is sold as "Unlimited AI Generations"
+      // while the endpoint refused at 300/day.
+      userPlan.value = "pro";
+      usageDocs.set(`${currentUid}_${today()}`, { count: 300 });
+
+      const res = await authed("/api/generate").send({ prompt: "hi" });
+
+      expect(res.status).toBe(200);
+    });
+
+    it("never quotes a plan allowance for a plan sold as unlimited", async () => {
+      userPlan.value = "pro";
+      usageDocs.set(`${currentUid}_${today()}`, { count: 2_000 });
+
+      const res = await authed("/api/generate").send({ prompt: "hi" });
+
+      expect(res.status).toBe(429);
+      // The ceiling is an anti-abuse valve, not something the customer bought.
+      expect(res.body.error).not.toContain("pro");
+      expect(res.body.error).not.toContain("2000");
+      expect(res.body.error).toMatch(/unusual request volume/i);
     });
 
     it("gives a larger plan a larger allowance for the same usage", async () => {
@@ -268,7 +330,7 @@ describe("Express Server API", () => {
       const res = await authed("/api/generate").send({ prompt: "hi" });
 
       expect(res.status).toBe(200);
-      expect(res.headers["x-quota-limit"]).toBe("2000");
+      expect(res.headers["x-quota-limit"]).toBe("10000");
     });
 
     it("treats an unknown plan as the smallest, not the largest", async () => {
@@ -276,7 +338,18 @@ describe("Express Server API", () => {
 
       const res = await authed("/api/generate").send({ prompt: "hi" });
 
-      expect(res.headers["x-quota-limit"]).toBe("50");
+      expect(res.headers["x-quota-limit"]).toBe("10");
+    });
+
+    it("does not hand a free account a paying tier's quota", async () => {
+      // An absent plan is the "Free Edition" state Billing.tsx renders. It must
+      // not inherit Starter's allowance, which someone paid $29 for.
+      userPlan.value = undefined;
+
+      const res = await authed("/api/generate").send({ prompt: "hi" });
+
+      expect(res.status).toBe(200);
+      expect(Number(res.headers["x-quota-limit"])).toBeLessThan(100);
     });
 
     it("throttles a caller hammering the route", async () => {
